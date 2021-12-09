@@ -12,10 +12,11 @@ import {
   ScanOptions,
   WorkerMethods,
   WorkerPool,
-  isSupportedExtension
+  isSupportedExtension,
+  pdfToImages
 } from './utils'
 
-export { Progress, ScanOptions, ocr }
+export { Progress, ScanOptions, ocr, pdfToImages }
 
 /** Internal function */
 export const visitDir = async (
@@ -36,9 +37,9 @@ export const visitDir = async (
   if (shouldConsoleLog) console.log(`🔍 Scan directory   ${dir.path}`)
   for (const child of dir.children!) {
     if (child.type === 'file')
-      visitFile(child, { progress, pool, words, shouldConsoleLog, outputLogFile, tesseractConfig })
+      await visitFile(child, { progress, pool, words, shouldConsoleLog, outputLogFile, tesseractConfig })
     else
-      await visitDir(child, { progress, pool, words, shouldConsoleLog, progressFile, outputLogFile, tesseractConfig })
+      await visitDir(child, { progress, pool, words, shouldConsoleLog, outputLogFile, tesseractConfig, progressFile })
   }
 
   await pool.settled(true)
@@ -49,7 +50,7 @@ export const visitDir = async (
 }
 
 /** Internal function */
-export const visitFile = (
+export const visitFile = async (
   file: dirTree.DirectoryTree,
   {
     progress,
@@ -65,19 +66,39 @@ export const visitFile = (
 ) => {
   if (file.name === '.gitkeep') return
 
+  if (!isSupportedExtension(file.extension!)) {
+    if (shouldConsoleLog) console.log(`👽 Unsupported file ${file.path}`)
+    // Mark as visited
+    progress.visited.add(file.path)
+    return
+  }
+
   if (progress.visited.has(file.path)) {
     if (shouldConsoleLog) console.log(`⏩ Skip visited     ${file.path}`)
     return
   }
 
-  pool.queue(async ({ scanFile }: WorkerMethods) => {
-    if (!isSupportedExtension(file.extension!)) {
-      if (shouldConsoleLog) console.log(`👽 Unsupported file ${file.path}`)
-      // Mark as visited
-      progress.visited.add(file.path)
-      return
+  // Convert PDF pages to images
+  if (file.extension === '.pdf') {
+    const images = await pdfToImages(file.path)
+    if (shouldConsoleLog) console.log(`✨ Extracted PDF    ${file.path}`)
+    for (const image of images) {
+      // Convert to directoryTree format
+      const imageTreeFormat: dirTree.DirectoryTree = {
+        name: image.name!,
+        path: image.path!,
+        size: -1,
+        type: 'file',
+        extension: '.jpg'
+      }
+      await visitFile(imageTreeFormat, { progress, pool, words, shouldConsoleLog, outputLogFile, tesseractConfig })
     }
+    // Only mark PDF as visited to not convert it again
+    progress.visited.add(file.path)
+    return
+  }
 
+  pool.queue(async ({ scanFile }: WorkerMethods) => {
     try {
       const scanRes = await scanFile(file, words, tesseractConfig)
       if (scanRes && scanRes.matches.length > 0) {
@@ -113,10 +134,10 @@ export const scanDir = async (
   {
     words = ['MATCH_ALL'],
     shouldConsoleLog = false,
-    progressFile,
     outputLogFile,
     workerPoolSize,
-    tesseractConfig
+    tesseractConfig,
+    progressFile
   }: ScanOptions = {}
 ) => {
   // Do not use all CPU cores as default, it makes the OCR process way slower!

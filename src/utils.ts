@@ -1,8 +1,11 @@
 import fs from 'fs-extra'
+import path from 'path'
 import { recognize as tesseractRecognize } from 'node-tesseract-ocr'
+import { fromPath } from 'pdf2pic'
 import dirTree from 'directory-tree'
 
 import type { ModuleThread, Pool } from 'threads'
+import type { WriteImageResponse } from 'pdf2pic/dist/types/writeImageResponse'
 
 export type ScanOptions = {
   /**
@@ -62,24 +65,37 @@ export const cleanStr = (str: string) =>
     .toLowerCase()
 
 /**
- * @param path Path to the image to extract text from
+ * @param filePath Path to the image to extract text from
  * @param tesseractConfig Tesseract configuration
  * @param shouldCleanStr Should the string be normalized (lowercase, accents removed, whitespace removed)
  * @returns Text content
  */
-export const ocr = async (path: string, tesseractConfig: TesseractConfig = {}, shouldCleanStr = true) => {
+export const ocr = async (filePath: string, tesseractConfig: TesseractConfig = {}, shouldCleanStr = true) => {
   // Apply default options
   if (!tesseractConfig.lang) tesseractConfig.lang = 'eng'
   if (!tesseractConfig.oem) tesseractConfig.oem = 1
   if (!tesseractConfig.psm) tesseractConfig.psm = 3
 
-  const text = await tesseractRecognize(path, tesseractConfig)
+  const text = await tesseractRecognize(filePath, tesseractConfig)
   return text
     .split('\n')
     .map(x => (shouldCleanStr ? cleanStr(x) : x))
     .filter(x => x)
     .join('\n')
 }
+
+/**
+ * Extract all the pages of a PDF to images
+ * @param filePath Path to the PDF to be converted
+ * @param format Output format
+ * @returns List of generated output images
+ */
+export const pdfToImages = async (filePath: string, format = 'jpg'): Promise<WriteImageResponse[]> =>
+  fromPath(filePath, {
+    saveFilename: `${path.basename(filePath)}`,
+    savePath: path.dirname(filePath),
+    format
+  }).bulk!(-1 /* all pages */)
 
 /**
  * Find all words that were matched in text
@@ -96,8 +112,7 @@ export const findMatches = (input: string, words: ScanOptions['words']): string[
   return words.filter(word => input.includes(word))
 }
 
-// TODO: Support PDF
-export const isSupportedExtension = (ext: string) => ['.jpg', '.png', '.webp'].some(x => ext.toLowerCase() === x)
+export const isSupportedExtension = (ext: string) => ['.jpg', '.jpeg', '.png', '.webp', '.pdf'].includes(ext)
 
 export const scanFile = async (
   file: dirTree.DirectoryTree,

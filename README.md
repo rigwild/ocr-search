@@ -9,7 +9,7 @@
 
 Supported file formats:
 
-- Images: JPG, PNG, [WebP](https://en.wikipedia.org/wiki/WebP)
+- Images: JPEG, PNG, [WebP](https://en.wikipedia.org/wiki/WebP)
 - Documents: PDF
 
 Unsupported file formats:
@@ -17,7 +17,7 @@ Unsupported file formats:
 - Images: [AVIF](https://en.wikipedia.org/wiki/AVIF), [WebP 2 (`.wp2`)](https://en.wikipedia.org/wiki/WebP#WebP_2), [JPEG XL (`.jxl`)](https://en.wikipedia.org/wiki/JPEG_XL)
 - Documents: Office (`.docx`, `.xlsx`, `.pptx`, ...)
 
-[Tesseract OCR](https://github.com/tesseract-ocr/tesseract/blob/main/doc/tesseract.1.asc) is used internally.
+[Tesseract OCR](https://github.com/tesseract-ocr/tesseract) is used internally ([Tesseract Documentation](https://github.com/tesseract-ocr/tesseract/blob/main/doc/tesseract.1.asc)). For PDF to JPEG conversion, [GraphicsMagick](http://www.graphicsmagick.org/) is used.
 
 This package uses [worker threads](https://nodejs.org/api/worker_threads.html) to make use of your CPU cores and be faster.
 
@@ -28,13 +28,20 @@ This package uses [worker threads](https://nodejs.org/api/worker_threads.html) t
 
 ## Install
 
-No matter how you decide to use this package, you need to install [Tesseract OCR](https://github.com/tesseract-ocr/tesseract/blob/main/doc/tesseract.1.asc) anyway.
+No matter how you decide to use this package, you need to install Tesseract OCR anyway. If you have some PDF files, they need to be converted with additional packages
 
 ```sh
+# OCR Package
 sudo apt install tesseract-ocr
+
+# PDF to JPEG conversion utilities (for Windows/MacOS, see https://github.com/yakovmeister/pdf2image/blob/HEAD/docs/gm-installation.md)
+$ sudo apt install ghostscript graphicsmagick
 ```
 
-See [Installing Tesseract](https://github.com/tesseract-ocr/tesseract#installing-tesseract).
+For non-linux user, check:
+
+- [Installing Tesseract](https://github.com/tesseract-ocr/tesseract#installing-tesseract)
+- [GraphicsMagick Installation](https://github.com/yakovmeister/pdf2image/blob/HEAD/docs/gm-installation.md)
 
 ### OCR Language
 
@@ -51,8 +58,7 @@ sudo cp fra.traineddata /usr/share/tesseract-ocr/4.00/tessdata/
 ```sh
 git clone bulk-files-ocr-search
 cd bulk-files-ocr-search
-# npm install -D
-pnpm install
+pnpm install # or npm install -D
 pnpm build
 ```
 
@@ -140,7 +146,7 @@ console.log('Scan finished!')
 console.timeEnd('scan')
 ```
 
-The standalone OCR function is also exported.
+The standalone OCR and PDF to images functions are also exported.
 
 ```ts
 import path from 'path'
@@ -152,10 +158,22 @@ const file = path.resolve(__dirname, '..', 'test', '_testFiles', 'sample.jpg')
 const tesseractConfig: TesseractConfig = {}
 
 // Should the string be normalized (lowercase, accents removed, whitespace removed)
-const shouldCleanStr: boolean = true
+const shouldCleanStr: boolean | undefined = true
 
+// OCR
 const text = await ocr(file, tesseractConfig, shouldCleanStr)
 console.log(text)
+
+// ---
+
+const filePdf = path.resolve(__dirname, '..', 'test', '_testFiles', 'sample.pdf')
+
+// Extracted pages output format
+const format: string | undefined = 'jpg'
+
+// PDF to images
+const res = await pdfToImages(filePdf, format)
+console.log(res) // Files are generated on the file system, 1 file per page
 ```
 
 ## License

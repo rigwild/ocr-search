@@ -24,6 +24,7 @@
     "directory-tree": "^3.0.1",
     "fs-extra": "^10.0.0",
     "node-tesseract-ocr": "^2.2.1",
+    "pdf2pic": "^2.1.4",
     "threads": "^1.7.0"
   },
   "devDependencies": {
