@@ -9,6 +9,10 @@
     "email": "me@rigwild.dev",
     "url": "https://rigwild.dev"
   },
+  "files": [
+    "dist",
+    "pnpm-lock.yaml"
+  ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
