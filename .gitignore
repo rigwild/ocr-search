@@ -5,3 +5,5 @@ data/*
 progress.json
 matches.txt
 runner
+test/_tempFiles/*
+!test/_tempFiles/.gitkeep
