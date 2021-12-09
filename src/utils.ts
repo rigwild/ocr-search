@@ -7,25 +7,35 @@ import type { ModuleThread, Pool } from 'threads'
 export type ScanOptions = {
   /**
    * List of words to search (if one is matched, the file is matched)
+   *
    * If not provided, every files will get matched (useful to do mass OCR and save the result)
    */
-  words: string[] | ['MATCH_ALL']
+  words?: string[] | ['MATCH_ALL']
+
+  /**
+   * Should the logs be printed to the console? (default = false)
+   */
+  shouldConsoleLog?: boolean
+
   /**
    * If provided, the progress will be saved to a file
    *
    * When stopped, the process will start from where it stopped last time by looking there
    */
   progressFile?: string
+
   /**
    * If provided, every file path and their text content that were matched are logged to this file
    */
   outputLogFile?: string
+
   /**
    * Amount of worker threads to use (default = your total CPU cores - 2)
    *
    * Note: Using all your available cores may slow down the process!
    */
   workerPoolSize?: number
+
   /**
    * Tesseract OCR config, will default to english language
    *
@@ -34,7 +44,8 @@ export type ScanOptions = {
   tesseractConfig?: TesseractConfig
 }
 
-export type Progress = { visited: Set<string> }
+export type Progress = { visited: Set<string>; matched: Map<string, { text: string; matches: string[] }> }
+export type ProgressJson = { visited: string[]; matched: { [path: string]: { text: string; matches: string[] } } }
 
 /** @see https://github.com/tesseract-ocr/tesseract/blob/main/doc/tesseract.1.asc */
 export type TesseractConfig = Parameters<typeof tesseractRecognize>[1]
@@ -50,68 +61,76 @@ export const cleanStr = (str: string) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
 
-export const ocr = async (path: string, tesseractConfig: TesseractConfig = {}) => {
+/**
+ * @param path Path to the image to extract text from
+ * @param tesseractConfig Tesseract configuration
+ * @param shouldCleanStr Should the string be normalized (lowercase, accents removed, whitespace removed)
+ * @returns Text content
+ */
+export const ocr = async (path: string, tesseractConfig: TesseractConfig = {}, shouldCleanStr = true) => {
   // Apply default options
   if (!tesseractConfig.lang) tesseractConfig.lang = 'eng'
   if (!tesseractConfig.oem) tesseractConfig.oem = 1
   if (!tesseractConfig.psm) tesseractConfig.psm = 3
 
   const text = await tesseractRecognize(path, tesseractConfig)
-
   return text
     .split('\n')
-    .map(cleanStr)
+    .map(x => (shouldCleanStr ? cleanStr(x) : x))
     .filter(x => x)
+    .join('\n')
 }
 
-export const findMatches = (input: string[], words: ScanOptions['words']): string[] => {
-  if (words.length === 1 && words[0] === 'MATCH_ALL') return ['MATCH_ALL']
-
-  const matches = []
-  for (const line of input) {
-    for (const word of words) {
-      if (line.includes(word)) matches.push(word)
-    }
+/**
+ * Find all words that were matched in text
+ *
+ * If words is `['MATCH_ALL']`, it will just skip the search as it will match every files
+ * @param input
+ * @param words
+ * @returns List of matched words
+ */
+export const findMatches = (input: string, words: ScanOptions['words']): string[] => {
+  if (!words || (words.length === 1 && words[0] === 'MATCH_ALL')) {
+    return ['MATCH_ALL']
   }
-  return matches
+  return words.filter(word => input.includes(word))
 }
+
+// TODO: Support PDF
+export const isSupportedExtension = (ext: string) => ['.jpg', '.png', '.webp'].some(x => ext.toLowerCase() === x)
 
 export const scanFile = async (
   file: dirTree.DirectoryTree,
   words: ScanOptions['words'],
   tesseractConfig?: TesseractConfig
 ) => {
-  if (file.extension! !== '.jpg') return
-  try {
-    const text = await ocr(file.path, tesseractConfig)
-    const matches = findMatches(text, words)
-    return { text, matches }
-  } catch (error: any) {
-    console.log('----- ERROR!!!!!', file.name)
-    console.error(error)
-  }
+  const text = await ocr(file.path, tesseractConfig)
+  const matches = findMatches(text, words)
+  return { text, matches }
 }
 
 export const loadProgress = async (progressFile?: string): Promise<Progress> => {
-  if (!progressFile || !(await fs.pathExists(progressFile))) return { visited: new Set() }
+  if (!progressFile || !(await fs.pathExists(progressFile))) {
+    return { visited: new Set(), matched: new Map() }
+  }
 
-  const progressJson: { visited: string[] } = await fs.readJson(progressFile)
-  console.log('Progress')
-  console.log(progressJson)
-  // Convert JSON array to Set
+  const progressJson: ProgressJson = await fs.readJson(progressFile)
   return {
-    visited: new Set(progressJson.visited)
+    visited: new Set(progressJson.visited),
+    matched: new Map(Object.entries(progressJson.matched))
   }
 }
 
 export const saveProgress = async (progressFile: string, progress: Progress): Promise<void> => {
-  // Convert Set to JSON array
-  const progressJson: { [visitedDirName: string]: string[] } = {}
-  Object.entries(progress).forEach(([k, v]) => (progressJson[k] = [...v]))
+  const progressJson: ProgressJson = {
+    visited: [...progress.visited],
+    matched: Object.fromEntries([...progress.matched.entries()])
+  }
+
   await fs.writeJson(progressFile, progressJson, { spaces: 2 })
 }
 
 export const getTree = async (scannedDir: string) => {
-  if (!(await fs.pathExists(scannedDir))) throw new Error('`data` directory not found')
+  if (!(await fs.pathExists(scannedDir))) throw new Error('Directory not found')
   return dirTree(scannedDir, { attributes: ['size', 'type', 'extension'] })
 }

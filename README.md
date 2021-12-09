@@ -9,8 +9,13 @@
 
 Supported file formats:
 
-- Images: JPG, PNG
+- Images: JPG, PNG, [WebP](https://en.wikipedia.org/wiki/WebP)
 - Documents: PDF
+
+Unsupported file formats:
+
+- Images: [AVIF](https://en.wikipedia.org/wiki/AVIF), [WebP 2 (`.wp2`)](https://en.wikipedia.org/wiki/WebP#WebP_2), [JPEG XL (`.jxl`)](https://en.wikipedia.org/wiki/JPEG_XL)
+- Documents: Office (`.docx`, `.xlsx`, `.pptx`, ...)
 
 [Tesseract OCR](https://github.com/tesseract-ocr/tesseract/blob/main/doc/tesseract.1.asc) is used internally.
 
@@ -77,29 +82,37 @@ import { scanDir, TesseractConfig } from 'bulk-files-ocr-search'
 export type ScanOptions = {
   /**
    * List of words to search (if one is matched, the file is matched)
+   *
    * If not provided, every files will get matched (useful to do mass OCR and save the result)
    */
   words: string[] | ['MATCH_ALL']
+
+  /**
+   * Should the logs be printed to the console? (default = false)
+   */
+  shouldConsoleLog?: boolean
+
   /**
    * If provided, the progress will be saved to a file
    *
    * When stopped, the process will start from where it stopped last time by looking there
    */
   progressFile?: string
+
   /**
    * If provided, every file path and their text content that were matched are logged to this file
    */
   outputLogFile?: string
+
   /**
    * Amount of worker threads to use (default = your total CPU cores - 2)
    *
    * Note: Using all your available cores may slow down the process!
    */
   workerPoolSize?: number
+
   /**
    * Tesseract OCR config, will default to english language
-   *
-   * Do not forget to install the requested language!
    *
    * @see https://github.com/tesseract-ocr/tesseract/blob/main/doc/tesseract.1.asc
    */
@@ -108,15 +121,16 @@ export type ScanOptions = {
 
 const words = ['hello', 'match this', '<<<<<']
 
-const scannedDir = path.resolve(__dirname, '..', 'data')
-const progressFile = path.resolve(__dirname, '..', 'progress.json')
-const outputLogFile = path.resolve(__dirname, '..', 'matches.txt')
+const scannedDir = path.resolve(__dirname, 'data')
+const progressFile = path.resolve(__dirname, 'progress.json')
+const outputLogFile = path.resolve(__dirname, 'matches.txt')
 const tesseractConfig: TesseractConfig = { lang: 'eng' }
 
 console.time('scan')
 
 await scanDir(scannedDir, {
   words,
+  shouldConsoleLog: true,
   progressFile,
   outputLogFile,
   tesseractConfig
@@ -124,6 +138,24 @@ await scanDir(scannedDir, {
 
 console.log('Scan finished!')
 console.timeEnd('scan')
+```
+
+The standalone OCR function is also exported.
+
+```ts
+import path from 'path'
+import { ocr } from 'bulk-files-ocr-search'
+
+const file = path.resolve(__dirname, '..', 'test', '_testFiles', 'sample.jpg')
+
+// Tesseract configuration
+const tesseractConfig: TesseractConfig = {}
+
+// Should the string be normalized (lowercase, accents removed, whitespace removed)
+const shouldCleanStr: boolean = true
+
+const text = await ocr(file, tesseractConfig, shouldCleanStr)
+console.log(text)
 ```
 
 ## License

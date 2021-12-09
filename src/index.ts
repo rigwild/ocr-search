@@ -3,9 +3,19 @@ import fs from 'fs-extra'
 import dirTree from 'directory-tree'
 import { spawn, Pool, Worker } from 'threads'
 
-import { getTree, loadProgress, Progress, saveProgress, ScanOptions, WorkerMethods, WorkerPool } from './utils'
+import {
+  getTree,
+  loadProgress,
+  Progress,
+  saveProgress,
+  ocr,
+  ScanOptions,
+  WorkerMethods,
+  WorkerPool,
+  isSupportedExtension
+} from './utils'
 
-export { Progress, ScanOptions }
+export { Progress, ScanOptions, ocr }
 
 /** Internal function */
 export const visitDir = async (
@@ -14,27 +24,28 @@ export const visitDir = async (
     progress,
     pool,
     words,
+    shouldConsoleLog,
     progressFile,
     outputLogFile,
     tesseractConfig
   }: { progress: Progress; pool: WorkerPool } & Pick<
     ScanOptions,
-    'words' | 'progressFile' | 'outputLogFile' | 'tesseractConfig'
+    'words' | 'shouldConsoleLog' | 'progressFile' | 'outputLogFile' | 'tesseractConfig'
   >
 ) => {
-  console.log(`\n🔍 Look dir ${dir.path}`)
+  if (shouldConsoleLog) console.log(`🔍 Scan directory   ${dir.path}`)
   for (const child of dir.children!) {
-    if (child.type === 'file') visitFile(child, { progress, pool, words, outputLogFile, tesseractConfig })
-    else await visitDir(child, { progress, pool, words, outputLogFile, tesseractConfig })
+    if (child.type === 'file')
+      visitFile(child, { progress, pool, words, shouldConsoleLog, outputLogFile, tesseractConfig })
+    else
+      await visitDir(child, { progress, pool, words, shouldConsoleLog, progressFile, outputLogFile, tesseractConfig })
   }
 
-  if (progressFile) {
-    await pool.settled(true)
-    await saveProgress(progressFile, progress)
-  }
+  await pool.settled(true)
+  if (progressFile) await saveProgress(progressFile, progress)
 
   // We do not mark directories as visited in case the user adds new files
-  // to them in the future!
+  // in them in the future!
 }
 
 /** Internal function */
@@ -44,31 +55,52 @@ export const visitFile = (
     progress,
     pool,
     words,
+    shouldConsoleLog,
     outputLogFile,
     tesseractConfig
-  }: { progress: Progress; pool: WorkerPool } & Pick<ScanOptions, 'words' | 'outputLogFile' | 'tesseractConfig'>
+  }: { progress: Progress; pool: WorkerPool } & Pick<
+    ScanOptions,
+    'words' | 'shouldConsoleLog' | 'outputLogFile' | 'tesseractConfig'
+  >
 ) => {
   if (file.name === '.gitkeep') return
 
   if (progress.visited.has(file.path)) {
-    console.log(`⏩ Skip     ${file.path}`)
+    if (shouldConsoleLog) console.log(`⏩ Skip visited     ${file.path}`)
     return
   }
 
   pool.queue(async ({ scanFile }: WorkerMethods) => {
-    const scanRes = await scanFile(file, words, tesseractConfig)
-    if (scanRes && scanRes.matches.length > 0) {
-      let str = ''
-      str += `\n✅ MATCH!   ${file.path}\n`
-      str += `Words: ${scanRes.matches.join()}\n`
-      str += `Text:\n${scanRes.text.join('\n')}\n`
-      console.log(str)
+    if (!isSupportedExtension(file.extension!)) {
+      if (shouldConsoleLog) console.log(`👽 Unsupported file ${file.path}`)
+      // Mark as visited
+      progress.visited.add(file.path)
+      return
+    }
 
-      if (outputLogFile) {
-        await fs.promises.writeFile(outputLogFile, `${str}\n----------------\n`, { flag: 'a' })
+    try {
+      const scanRes = await scanFile(file, words, tesseractConfig)
+      if (scanRes && scanRes.matches.length > 0) {
+        let str = ''
+        str += `\n✅ MATCH!           ${file.path}\n`
+        str += `Words: ${scanRes.matches.join()}\n`
+        str += `Text:\n${scanRes.text}\n`
+        if (shouldConsoleLog) console.log(str)
+
+        // Save in the matched Map
+        progress.matched.set(file.path, scanRes)
+        if (outputLogFile) {
+          await fs.promises.writeFile(outputLogFile, `${str}\n----------------\n`, { flag: 'a' })
+        }
+      } else {
+        if (shouldConsoleLog) console.log(`❌ No words matched ${file.path}`)
       }
-    } else {
-      console.log(`❌ No match ${file.path}`)
+    } catch (error: any) {
+      if (shouldConsoleLog) {
+        console.log('💥 ERROR! Scan fail ', file.path)
+        console.error(error)
+      }
+      // FIXME: Should the error be bubbled up for programmatic usage?
     }
 
     // Mark as visited
@@ -78,16 +110,24 @@ export const visitFile = (
 
 export const scanDir = async (
   scannedDir: string,
-  { words = ['MATCH_ALL'], progressFile, outputLogFile, workerPoolSize, tesseractConfig }: ScanOptions
+  {
+    words = ['MATCH_ALL'],
+    shouldConsoleLog = false,
+    progressFile,
+    outputLogFile,
+    workerPoolSize,
+    tesseractConfig
+  }: ScanOptions = {}
 ) => {
   // Do not use all CPU cores as default, it makes the OCR process way slower!
   if (!workerPoolSize) workerPoolSize = os.cpus().length > 3 ? os.cpus().length - 2 : 1
 
   const pool: WorkerPool = Pool(() => spawn<WorkerMethods>(new Worker('./worker')), { size: workerPoolSize })
   const progress = await loadProgress(progressFile)
-
   const dir = await getTree(scannedDir)
-  await visitDir(dir, { words, progress, pool, progressFile, outputLogFile, tesseractConfig })
+  await visitDir(dir, { words, progress, pool, shouldConsoleLog, progressFile, outputLogFile, tesseractConfig })
 
   await pool.terminate()
+
+  return progress
 }
