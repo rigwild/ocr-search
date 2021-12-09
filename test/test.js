@@ -11,19 +11,28 @@ const { scanDir, ocr, pdfToImages } = require('../dist')
 const testFiles = path.resolve(__dirname, '_testFiles')
 const tempFiles = path.resolve(__dirname, '_tempFiles')
 
-const avif = path.resolve(testFiles, 'sample.avif')
-const jpg = path.resolve(testFiles, 'sample.jpg')
-const jxl = path.resolve(testFiles, 'sample.jxl')
-const pdf = path.resolve(testFiles, 'sample.pdf')
-const png = path.resolve(testFiles, 'sample.png')
-const webp = path.resolve(testFiles, 'sample.webp')
-const wp2 = path.resolve(testFiles, 'sample.wp2')
+const avif = path.resolve(testFiles, 'avif.avif')
+const jpg = path.resolve(testFiles, 'jpg.jpg')
+const jxl = path.resolve(testFiles, 'jxl.jxl')
+const pdf = path.resolve(testFiles, 'pdf.pdf')
+const png = path.resolve(testFiles, 'png.png')
+const webp = path.resolve(testFiles, 'webp.webp')
+const wp2 = path.resolve(testFiles, 'wp2.wp2')
+
+const jpg15 = path.resolve(testFiles, 'jpg15.jpg')
+const jpg45 = path.resolve(testFiles, 'jpg45.jpg')
+const jpg90 = path.resolve(testFiles, 'jpg90.jpg')
+const jpg135 = path.resolve(testFiles, 'jpg135.jpg')
+const jpg180 = path.resolve(testFiles, 'jpg180.jpg')
+const jpg225 = path.resolve(testFiles, 'jpg225.jpg')
+const jpg270 = path.resolve(testFiles, 'jpg270.jpg')
+const jpg315 = path.resolve(testFiles, 'jpg315.jpg')
 
 const progressFile = path.resolve(tempFiles, 'progress.json')
 const outputLogFile = path.resolve(tempFiles, 'log.txt')
-const pdfTemp = path.resolve(tempFiles, 'sample.pdf')
+const pdfTemp = path.resolve(tempFiles, 'pdf.pdf')
 
-const expected = 'myself in my customary seat and with as fair an imitation of'
+const expected = 'in my customary seat and with as fair an imitation of'
 
 test('pdf to images', async t => {
   await fs.copyFile(pdf, pdfTemp)
@@ -57,6 +66,30 @@ test('ocr webp', async t => {
 
 test('ocr wp2 is not supported', async t => {
   await t.throwsAsync(ocr(wp2))
+})
+
+test.only('ocr rotated text', async t => {
+  t.timeout(25000)
+  // t.log('jpg ' + (await ocr(jpg)))
+  // t.log('jpg15 ' + (await ocr(jpg15)))
+  // t.log('jpg45 ' + (await ocr(jpg45)))
+  // t.log('jpg90 ' + (await ocr(jpg90)))
+  // t.log('jpg135 ' + (await ocr(jpg135)))
+  // t.log('jpg180 ' + (await ocr(jpg180)))
+  // t.log('jpg225 ' + (await ocr(jpg225)))
+  // t.log('jpg270 ' + (await ocr(jpg270)))
+  // t.log('jpg315 ' + (await ocr(jpg315)))
+
+  t.true((await ocr(jpg)).includes(expected))
+  t.true((await ocr(jpg90)).includes(expected))
+  t.true((await ocr(jpg180)).includes(expected))
+  t.true((await ocr(jpg270)).includes(expected))
+
+  t.false((await ocr(jpg15)).includes(expected))
+  t.false((await ocr(jpg45)).includes(expected))
+  t.false((await ocr(jpg135)).includes(expected))
+  t.false((await ocr(jpg225)).includes(expected))
+  t.false((await ocr(jpg315)).includes(expected))
 })
 
 // ---

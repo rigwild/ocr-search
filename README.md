@@ -23,7 +23,9 @@ This package uses [worker threads](https://nodejs.org/api/worker_threads.html) t
 
 **Notes:**
 
-- The OCR will only provide relevant results if your files are in a proper orientation (text is horizontal and not upside-down).
+- The OCR will provide bad results for rotated files/non-straight text.
+  - 90/180 degrees rotations seems to output a good result
+  - You may want to pre-process your files somehow to make the text straight!
 - Files will be matched if at least 1 of the words is found in the text contained in it.
 
 ## Install
@@ -118,7 +120,7 @@ export type ScanOptions = {
   workerPoolSize?: number
 
   /**
-   * Tesseract OCR config, will default to english language
+   * Tesseract OCR config, will default to english language `{ lang: 'eng' }`
    *
    * @see https://github.com/tesseract-ocr/tesseract/blob/main/doc/tesseract.1.asc
    */
@@ -155,7 +157,9 @@ import { ocr } from 'bulk-files-ocr-search'
 const file = path.resolve(__dirname, '..', 'test', '_testFiles', 'sample.jpg')
 
 // Tesseract configuration
-const tesseractConfig: TesseractConfig = {}
+const tesseractConfig: TesseractConfig = {
+  lang: 'eng'
+}
 
 // Should the string be normalized (lowercase, accents removed, whitespace removed)
 const shouldCleanStr: boolean | undefined = true

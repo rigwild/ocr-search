@@ -40,7 +40,7 @@ export type ScanOptions = {
   workerPoolSize?: number
 
   /**
-   * Tesseract OCR config, will default to english language
+   * Tesseract OCR config, will default to english language `{ lang: 'eng' }`
    *
    * @see https://github.com/tesseract-ocr/tesseract/blob/main/doc/tesseract.1.asc
    */
@@ -74,7 +74,8 @@ export const ocr = async (filePath: string, tesseractConfig: TesseractConfig = {
   // Apply default options
   if (!tesseractConfig.lang) tesseractConfig.lang = 'eng'
   if (!tesseractConfig.oem) tesseractConfig.oem = 1
-  if (!tesseractConfig.psm) tesseractConfig.psm = 3
+  // PSM 1 seems to output better result for rotated content
+  if (!tesseractConfig.psm) tesseractConfig.psm = 1
 
   const text = await tesseractRecognize(filePath, tesseractConfig)
   return text
