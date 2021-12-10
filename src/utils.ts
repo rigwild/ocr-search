@@ -28,7 +28,7 @@ export type ScanOptions = {
   /**
    * If provided, every file path and their text content that were matched are logged to this file
    */
-  outputLogFile?: string
+  matchesLogFile?: string
 
   /**
    * Amount of worker threads to use (default = your total CPU cores - 2)
@@ -38,7 +38,7 @@ export type ScanOptions = {
   workerPoolSize?: number
 
   /**
-   * Tesseract OCR config, will default to english language `{ lang: 'eng' }`
+   * Tesseract OCR config, will default `{ lang: 'eng', oem: 1, psm: 1 }`
    *
    * @see https://github.com/tesseract-ocr/tesseract/blob/main/doc/tesseract.1.asc
    */

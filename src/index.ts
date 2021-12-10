@@ -31,19 +31,35 @@ export const visitDir = async (
     words,
     shouldConsoleLog,
     progressFile,
-    outputLogFile,
+    matchesLogFile,
     tesseractConfig
   }: { progress: Progress; pool: WorkerPool } & Pick<
     ScanOptions,
-    'words' | 'shouldConsoleLog' | 'progressFile' | 'outputLogFile' | 'tesseractConfig'
+    'words' | 'shouldConsoleLog' | 'progressFile' | 'matchesLogFile' | 'tesseractConfig'
   >
 ) => {
   if (shouldConsoleLog) console.log(`🔍 Scan directory   ${dir.path}`)
   for (const child of dir.children!) {
     if (child.type === 'file')
-      await visitFile(child, { progress, pool, words, shouldConsoleLog, progressFile, outputLogFile, tesseractConfig })
+      await visitFile(child, {
+        progress,
+        pool,
+        words,
+        shouldConsoleLog,
+        progressFile,
+        matchesLogFile: matchesLogFile,
+        tesseractConfig
+      })
     else
-      await visitDir(child, { progress, pool, words, shouldConsoleLog, progressFile, outputLogFile, tesseractConfig })
+      await visitDir(child, {
+        progress,
+        pool,
+        words,
+        shouldConsoleLog,
+        progressFile,
+        matchesLogFile: matchesLogFile,
+        tesseractConfig
+      })
   }
 
   await pool.settled(true)
@@ -62,11 +78,11 @@ export const visitFile = async (
     words,
     shouldConsoleLog,
     progressFile,
-    outputLogFile,
+    matchesLogFile,
     tesseractConfig
   }: { progress: Progress; pool: WorkerPool } & Pick<
     ScanOptions,
-    'words' | 'shouldConsoleLog' | 'progressFile' | 'outputLogFile' | 'tesseractConfig'
+    'words' | 'shouldConsoleLog' | 'progressFile' | 'matchesLogFile' | 'tesseractConfig'
   >
 ) => {
   if (file.name === '.gitkeep') return
@@ -110,7 +126,7 @@ export const visitFile = async (
         words,
         shouldConsoleLog,
         progressFile,
-        outputLogFile,
+        matchesLogFile: matchesLogFile,
         tesseractConfig
       })
     }
@@ -132,8 +148,8 @@ export const visitFile = async (
 
         // Save in the matched Map
         progress.matched.set(file.path, scanRes)
-        if (outputLogFile) {
-          await fs.promises.writeFile(outputLogFile, `${str}\n----------------\n`, { flag: 'a' })
+        if (matchesLogFile) {
+          await fs.promises.writeFile(matchesLogFile, `${str}\n----------------\n`, { flag: 'a' })
         }
       } else {
         if (shouldConsoleLog) console.log(`❌ No words matched ${file.path}`)
@@ -165,7 +181,7 @@ export const scanDir = async (
   {
     words = ['MATCH_ALL'],
     shouldConsoleLog = false,
-    outputLogFile,
+    matchesLogFile,
     workerPoolSize,
     tesseractConfig,
     progressFile
@@ -177,7 +193,15 @@ export const scanDir = async (
   const pool: WorkerPool = Pool(() => spawn<WorkerMethods>(new Worker('./worker')), { size: workerPoolSize })
   const progress = await loadProgress(progressFile)
   const dir = await getTree(scannedDir)
-  await visitDir(dir, { words, progress, pool, shouldConsoleLog, progressFile, outputLogFile, tesseractConfig })
+  await visitDir(dir, {
+    words,
+    progress,
+    pool,
+    shouldConsoleLog,
+    progressFile,
+    matchesLogFile: matchesLogFile,
+    tesseractConfig
+  })
 
   await pool.terminate()
 

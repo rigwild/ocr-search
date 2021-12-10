@@ -32,7 +32,7 @@ const webp270 = path.resolve(rotatedDir, 'webp270.webp')
 const webp315 = path.resolve(rotatedDir, 'webp315.webp')
 
 const progressFile = path.resolve(tempFiles, 'progress.json')
-const outputLogFile = path.resolve(tempFiles, 'log.txt')
+const matchesLogFile = path.resolve(tempFiles, 'log.txt')
 const pdfTemp = path.resolve(tempFiles, 'pdf.pdf')
 
 const expected = 'through a model of open collaboration, using a wiki-based editing system'
@@ -181,9 +181,9 @@ test.serial('scanDir with no words provided should match all', async t => {
 
 test.serial('scanDir should save progress and log file', async t => {
   t.timeout(25000)
-  await scanDir(scannedDir, { progressFile, outputLogFile, workerPoolSize: 2 })
+  await scanDir(scannedDir, { progressFile, matchesLogFile, workerPoolSize: 2 })
   t.true(await fs.pathExists(progressFile))
-  t.true(await fs.pathExists(outputLogFile))
+  t.true(await fs.pathExists(matchesLogFile))
 
   const progress = /** @type {import('../dist/utils').ProgressJson} */ (await fs.readJSON(progressFile))
   t.is(progress.visited.length, 12)
@@ -196,7 +196,7 @@ test.serial('scanDir should save progress and log file', async t => {
 
 test.after(async () => {
   await fs.remove(progressFile)
-  await fs.remove(outputLogFile)
+  await fs.remove(matchesLogFile)
   await fs.remove(pdfTemp)
   await fs.remove(`${pdfTemp}-1.png`)
   await fs.remove(`${pdfTemp}-2.png`)

@@ -13,10 +13,10 @@ const tesseractConfig = { lang: 'eng' }
 const scannedDir = path.resolve(__dirname, '..', 'data')
 
 const progressFile = path.resolve(__dirname, '..', 'progress.json')
-const outputLogFile = path.resolve(__dirname, '..', 'matches.txt')
+const matchesLogFile = path.resolve(__dirname, '..', 'matches.txt')
 
 console.time('scan')
-scanDir(scannedDir, { words, shouldConsoleLog: true, progressFile, outputLogFile, tesseractConfig }).then(() => {
+scanDir(scannedDir, { words, shouldConsoleLog: true, progressFile, matchesLogFile, tesseractConfig }).then(() => {
   console.log('Scan finished!')
   console.timeEnd('scan')
 })

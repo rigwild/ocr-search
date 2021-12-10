@@ -1,7 +1,7 @@
 {
   "name": "bulk-files-ocr-search",
   "version": "0.1.2",
-  "description": "Find files that contain some text with OCR",
+  "description": "🔍 Find files that contain some text with OCR",
   "license": "MIT",
   "repository": "rigwild/bulk-files-ocr-search",
   "author": {
@@ -13,6 +13,10 @@
     "dist",
     "pnpm-lock.yaml"
   ],
+  "readme": "README.md",
+  "bin": {
+    "ocr-search": "cli.mjs"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -24,6 +28,7 @@
     "directory-tree": "^3.0.1",
     "execa": "^5.1.1",
     "fs-extra": "^10.0.0",
+    "meow": "^10.1.2",
     "node-tesseract-ocr": "^2.2.1",
     "threads": "^1.7.0"
   },

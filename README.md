@@ -30,13 +30,14 @@ This package uses [worker threads](https://nodejs.org/api/worker_threads.html) t
 
 ## Install
 
-No matter how you decide to use this package, you need to install Tesseract OCR anyway. If you have some PDF files, they need to be converted with additional packages
+No matter how you decide to use this package, you need to install Tesseract OCR anyway. If you have some PDF files, they need to be converted with additional packages.
 
 ```sh
 # OCR Package (non-linux, see https://github.com/tesseract-ocr/tesseract#installing-tesseract)
 sudo apt install tesseract-ocr
 
 # PDF to JPEG conversion command-line (for Windows, see https://stackoverflow.com/a/53960829 - MacOS `brew install poppler`)
+# You can skip this if you don't plan to scan PDF files
 sudo apt install poppler-utils
 ```
 
@@ -50,7 +51,51 @@ wget https://github.com/tesseract-ocr/tessdata_fast/raw/main/fra.traineddata
 sudo cp fra.traineddata /usr/share/tesseract-ocr/4.00/tessdata/
 ```
 
-## Run from provided runner
+## Use with CLI
+
+This will install the `ocr-search` CLI.
+
+```sh
+pnpm i -g bulk-files-ocr-search
+```
+
+```sh
+  🔍 Find files that contain some text with OCR
+
+  Usage
+    $ ocr-search --words "<words_list>" <input_files>
+
+  Required
+    --words List of comma-separated words to search (if "MATCH_ALL", will match everything for mass OCR extraction)
+
+  Options
+    --progressFile     File to save progress to, will start from where it stopped last time by looking there (none="none")  [default="progress.json"]
+    --matchesLogFile   Log all matches to this file (none="none") [default="matches.txt"]
+    --no-console-logs  Silence console logs
+    --workers          Amount of worker threads to use (default is total CPU cores count - 2)
+
+  OCR Options - See https://github.com/tesseract-ocr/tesseract/blob/main/doc/tesseract.1.asc
+    --lang  Tesseract OCR LANG configuration [default="eng"]
+    --oem   Tesseract OCR OEM configuration [default="1"]
+    --psm   Tesseract OCR PSM configuration [default="1"]
+
+  Examples
+    Scan the "scanned-dir" directory and match all the files containing "system", "wiki" and "hello"
+      $ ocr-search --words "system,wiki,hello" scanned-dir
+
+    Scan the glob-matched files "*" and match all files (mass OCR text extraction)
+      $ ocr-search --words MATCH_ALL *
+
+    Use a specific Tesseract OCR configuration
+      $ ocr-search --words "wiki,hello" --lang fra --oem 1 --psm 3 scanned-dir
+
+    Do not save progress and do not log matches to file
+      $ ocr-search --words "wiki,hello" --progressFile none --matchesLogFile none scanned-dir
+
+  https://github.com/rigwild/bulk-files-ocr-search
+```
+
+## Use with provided runner
 
 ```sh
 git clone bulk-files-ocr-search
@@ -71,11 +116,15 @@ node run.js
 
 See [`run.js`](./run.js).
 
-## Run Programatically
+## Use Programatically
+
+### Install
 
 ```sh
 pnpm i bulk-files-ocr-search
 ```
+
+### Directory scan
 
 ```ts
 import path from 'path'
@@ -105,7 +154,7 @@ export type ScanOptions = {
   /**
    * If provided, every file path and their text content that were matched are logged to this file
    */
-  outputLogFile?: string
+  matchesLogFile?: string
 
   /**
    * Amount of worker threads to use (default = your total CPU cores - 2)
@@ -115,7 +164,7 @@ export type ScanOptions = {
   workerPoolSize?: number
 
   /**
-   * Tesseract OCR config, will default to english language `{ lang: 'eng' }`
+   * Tesseract OCR config, will default to `{ lang: 'eng', oem: 1, psm: 1 }`
    *
    * @see https://github.com/tesseract-ocr/tesseract/blob/main/doc/tesseract.1.asc
    */
@@ -126,7 +175,7 @@ const words = ['hello', 'match this', '<<<<<']
 
 const scannedDir = path.resolve(__dirname, 'data')
 const progressFile = path.resolve(__dirname, 'progress.json')
-const outputLogFile = path.resolve(__dirname, 'matches.txt')
+const matchesLogFile = path.resolve(__dirname, 'matches.txt')
 const tesseractConfig: TesseractConfig = { lang: 'eng' }
 
 console.time('scan')
@@ -135,7 +184,7 @@ await scanDir(scannedDir, {
   words,
   shouldConsoleLog: true,
   progressFile,
-  outputLogFile,
+  matchesLogFile,
   tesseractConfig
 })
 
@@ -143,7 +192,7 @@ console.log('Scan finished!')
 console.timeEnd('scan')
 ```
 
-The standalone OCR and PDF to images functions are also exported.
+### Perform OCR on a single file
 
 ```ts
 import path from 'path'
@@ -153,23 +202,30 @@ const file = path.resolve(__dirname, '..', 'test', '_testFiles', 'sample.jpg')
 
 // Tesseract configuration
 const tesseractConfig: TesseractConfig = {
-  lang: 'eng'
+  lang: 'eng',
+  oem: 1,
+  psm: 1
 }
 
-// Should the string be normalized (lowercase, accents removed, whitespace removed)
+// Should the string be normalized? (lowercase, accents removed, whitespace removed)
 const shouldCleanStr: boolean | undefined = true
 
-// OCR
 const text = await ocr(file, tesseractConfig, shouldCleanStr)
 console.log(text)
+```
 
-// ---
+### PDF to images conversion
+
+Convert PDF pages to PNG. Files are generated on the file system, 1 file per PDF page.
+
+```ts
+import path from 'path'
+import { pdfToImages } from 'bulk-files-ocr-search'
 
 const filePdf = path.resolve(__dirname, '..', 'test', '_testFiles', 'sample.pdf')
 
-// PDF to images
 const res = await pdfToImages(filePdf)
-console.log(res) // Files are generated on the file system, 1 file per page
+console.log(res) // Paths to generated PNG files
 ```
 
 ## License
