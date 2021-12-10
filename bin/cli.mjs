@@ -3,7 +3,7 @@
 // @ts-check
 
 import meow from 'meow'
-import { scanDir } from './dist/index.js'
+import { scanDir } from '../dist/index.js'
 
 const cli = meow(
   `
@@ -76,7 +76,7 @@ const cli = meow(
   }
 )
 
-/** @type {import('./dist/utils.js').ScanOptions} */
+/** @type {import('../dist/utils.js').ScanOptions} */
 const config = {
   words: cli.flags.words && cli.flags.words !== 'MATCH_ALL' ? cli.flags.words.split(',') : undefined,
   shouldConsoleLog: cli.flags.consoleLogs,

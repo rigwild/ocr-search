@@ -176,7 +176,7 @@ const words = ['hello', 'match this', '<<<<<']
 const scannedDir = path.resolve(__dirname, 'data')
 const progressFile = path.resolve(__dirname, 'progress.json')
 const matchesLogFile = path.resolve(__dirname, 'matches.txt')
-const tesseractConfig: TesseractConfig = { lang: 'eng' }
+const tesseractConfig: TesseractConfig = { lang: 'eng', oem: 1, psm: 1 }
 
 console.time('scan')
 
@@ -201,11 +201,7 @@ import { ocr } from 'bulk-files-ocr-search'
 const file = path.resolve(__dirname, '..', 'test', '_testFiles', 'sample.jpg')
 
 // Tesseract configuration
-const tesseractConfig: TesseractConfig = {
-  lang: 'eng',
-  oem: 1,
-  psm: 1
-}
+const tesseractConfig: TesseractConfig = { lang: 'eng', oem: 1, psm: 1 }
 
 // Should the string be normalized? (lowercase, accents removed, whitespace removed)
 const shouldCleanStr: boolean | undefined = true
