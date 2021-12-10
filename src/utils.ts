@@ -91,7 +91,7 @@ export const ocr = async (filePath: string, tesseractConfig: TesseractConfig = {
 export const isPdfAlreadyExtractedToImages = async (filePath: string) => {
   const fileName = path.basename(filePath)
   let files = await fs.readdir(path.dirname(filePath))
-  return !files.some(x => x === `${fileName}-1.png`)
+  return files.some(x => x === `${fileName}-1.png`)
 }
 
 /**

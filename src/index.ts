@@ -103,7 +103,7 @@ export const visitFile = async (
   if (file.extension === '.pdf') {
     let images: Array<{ name: string; path: string }> = []
 
-    if (!isPdfAlreadyExtractedToImages(file.path)) {
+    if (!(await isPdfAlreadyExtractedToImages(file.path))) {
       images = await pdfToImages(file.path)
       if (shouldConsoleLog) console.log(`✨ Extracted PDF    ${file.path}`)
     } else {
