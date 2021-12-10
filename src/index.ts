@@ -20,6 +20,8 @@ import {
 
 export { Progress, ScanOptions, ocr, pdfToImages }
 
+let scannedFilesSinceLastSaveProgressCount = 0
+
 /** Internal function */
 export const visitDir = async (
   dir: dirTree.DirectoryTree,
@@ -39,9 +41,9 @@ export const visitDir = async (
   if (shouldConsoleLog) console.log(`🔍 Scan directory   ${dir.path}`)
   for (const child of dir.children!) {
     if (child.type === 'file')
-      await visitFile(child, { progress, pool, words, shouldConsoleLog, outputLogFile, tesseractConfig })
+      await visitFile(child, { progress, pool, words, shouldConsoleLog, progressFile, outputLogFile, tesseractConfig })
     else
-      await visitDir(child, { progress, pool, words, shouldConsoleLog, outputLogFile, tesseractConfig, progressFile })
+      await visitDir(child, { progress, pool, words, shouldConsoleLog, progressFile, outputLogFile, tesseractConfig })
   }
 
   await pool.settled(true)
@@ -59,11 +61,12 @@ export const visitFile = async (
     pool,
     words,
     shouldConsoleLog,
+    progressFile,
     outputLogFile,
     tesseractConfig
   }: { progress: Progress; pool: WorkerPool } & Pick<
     ScanOptions,
-    'words' | 'shouldConsoleLog' | 'outputLogFile' | 'tesseractConfig'
+    'words' | 'shouldConsoleLog' | 'progressFile' | 'outputLogFile' | 'tesseractConfig'
   >
 ) => {
   if (file.name === '.gitkeep') return
@@ -89,7 +92,7 @@ export const visitFile = async (
       if (shouldConsoleLog) console.log(`✨ Extracted PDF    ${file.path}`)
     } else {
       images = await getPdfExtractedImages(file.path)
-      if (shouldConsoleLog) console.log(`📄 PDF was ready    ${file.path}`)
+      if (shouldConsoleLog) console.log(`📄 PDF is ready     ${file.path}`)
     }
 
     for (const image of images) {
@@ -101,7 +104,15 @@ export const visitFile = async (
         type: 'file',
         extension: '.png'
       }
-      await visitFile(imageTreeFormat, { progress, pool, words, shouldConsoleLog, outputLogFile, tesseractConfig })
+      await visitFile(imageTreeFormat, {
+        progress,
+        pool,
+        words,
+        shouldConsoleLog,
+        progressFile,
+        outputLogFile,
+        tesseractConfig
+      })
     }
 
     // Mark PDF as visited to not convert it again
@@ -137,6 +148,15 @@ export const visitFile = async (
 
     // Mark as visited
     progress.visited.add(file.path)
+
+    if (progressFile) {
+      scannedFilesSinceLastSaveProgressCount++
+      // Save progress every 5 scans
+      if (progressFile && scannedFilesSinceLastSaveProgressCount > 5) {
+        await saveProgress(progressFile, progress)
+        scannedFilesSinceLastSaveProgressCount = 0
+      }
+    }
   })
 }
 
