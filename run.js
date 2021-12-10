@@ -8,7 +8,7 @@ const words = ['hello', 'match this', '<<<<<']
  * @type {import('./dist/utils').TesseractConfig}
  * @see https://github.com/tesseract-ocr/tessdata_fast
  */
-const tesseractConfig = { lang: 'eng' }
+const tesseractConfig = { lang: 'eng', oem: 1, psm: 1 }
 
 const scannedDir = path.resolve(__dirname, '..', 'data')
 
