@@ -17,7 +17,7 @@ Unsupported file formats:
 - Images: [AVIF](https://en.wikipedia.org/wiki/AVIF), [WebP 2 (`.wp2`)](https://en.wikipedia.org/wiki/WebP#WebP_2), [JPEG XL (`.jxl`)](https://en.wikipedia.org/wiki/JPEG_XL)
 - Documents: Office (`.docx`, `.xlsx`, `.pptx`, ...)
 
-[Tesseract OCR](https://github.com/tesseract-ocr/tesseract) is used internally ([Tesseract Documentation](https://github.com/tesseract-ocr/tesseract/blob/main/doc/tesseract.1.asc)). For PDF to JPEG conversion, [GraphicsMagick](http://www.graphicsmagick.org/) is used.
+[Tesseract OCR](https://github.com/tesseract-ocr/tesseract) is used internally ([Tesseract Documentation](https://github.com/tesseract-ocr/tesseract/blob/main/doc/tesseract.1.asc)). For PDF to PNG conversion, [Poppler](https://poppler.freedesktop.org/) is used.
 
 This package uses [worker threads](https://nodejs.org/api/worker_threads.html) to make use of your CPU cores and be faster.
 
@@ -33,17 +33,12 @@ This package uses [worker threads](https://nodejs.org/api/worker_threads.html) t
 No matter how you decide to use this package, you need to install Tesseract OCR anyway. If you have some PDF files, they need to be converted with additional packages
 
 ```sh
-# OCR Package
+# OCR Package (non-linux, see https://github.com/tesseract-ocr/tesseract#installing-tesseract)
 sudo apt install tesseract-ocr
 
-# PDF to JPEG conversion utilities (for Windows/MacOS, see https://github.com/yakovmeister/pdf2image/blob/HEAD/docs/gm-installation.md)
-$ sudo apt install ghostscript graphicsmagick
+# PDF to JPEG conversion command-line (for Windows, see https://stackoverflow.com/a/53960829 - MacOS `brew install poppler`)
+sudo apt install poppler-utils
 ```
-
-For non-linux user, check:
-
-- [Installing Tesseract](https://github.com/tesseract-ocr/tesseract#installing-tesseract)
-- [GraphicsMagick Installation](https://github.com/yakovmeister/pdf2image/blob/HEAD/docs/gm-installation.md)
 
 ### OCR Language
 

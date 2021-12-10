@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - run: sudo apt install tesseract-ocr ghostscript graphicsmagick
+      - run: sudo apt install tesseract-ocr poppler-utils
       - run: yarn
       - run: yarn build
       - run: yarn test

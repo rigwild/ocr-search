@@ -1,11 +1,9 @@
 import fs from 'fs-extra'
 import path from 'path'
 import { recognize as tesseractRecognize } from 'node-tesseract-ocr'
-import { fromPath } from 'pdf2pic'
+import execa from 'execa'
 import dirTree from 'directory-tree'
-
 import type { ModuleThread, Pool } from 'threads'
-import type { WriteImageResponse } from 'pdf2pic/dist/types/writeImageResponse'
 
 export type ScanOptions = {
   /**
@@ -88,15 +86,19 @@ export const ocr = async (filePath: string, tesseractConfig: TesseractConfig = {
 /**
  * Extract all the pages of a PDF to images
  * @param filePath Path to the PDF to be converted
- * @param format Output format
  * @returns List of generated output images
  */
-export const pdfToImages = async (filePath: string, format = 'jpg'): Promise<WriteImageResponse[]> =>
-  fromPath(filePath, {
-    saveFilename: `${path.basename(filePath)}`,
-    savePath: path.dirname(filePath),
-    format
-  }).bulk!(-1 /* all pages */)
+export const pdfToImages = async (filePath: string): Promise<Array<{ name: string; path: string }>> => {
+  const fileName = path.basename(filePath)
+  // pdftoppm -png file.pdf output-images-prefix
+  await execa('pdftoppm', ['-png', filePath, filePath])
+
+  // Find the list of created files (we don't know how many pages are in the pdf!)
+  const files = await fs.readdir(path.dirname(filePath))
+  return files
+    .filter(x => x.startsWith(fileName) && x !== fileName)
+    .map(x => ({ name: x, path: path.resolve(path.dirname(fileName), x) }))
+}
 
 /**
  * Find all words that were matched in text

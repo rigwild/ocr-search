@@ -80,20 +80,23 @@ export const visitFile = async (
 
   // Convert PDF pages to images
   if (file.extension === '.pdf') {
+    // return
     const images = await pdfToImages(file.path)
     if (shouldConsoleLog) console.log(`✨ Extracted PDF    ${file.path}`)
+
     for (const image of images) {
       // Convert to directoryTree format
       const imageTreeFormat: dirTree.DirectoryTree = {
-        name: image.name!,
-        path: image.path!,
+        name: image.name,
+        path: image.path,
         size: -1,
         type: 'file',
-        extension: '.jpg'
+        extension: '.webp'
       }
       await visitFile(imageTreeFormat, { progress, pool, words, shouldConsoleLog, outputLogFile, tesseractConfig })
     }
-    // Only mark PDF as visited to not convert it again
+
+    // Mark PDF as visited to not convert it again
     progress.visited.add(file.path)
     return
   }
