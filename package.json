@@ -1,6 +1,6 @@
 {
   "name": "bulk-files-ocr-search",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Find files that contain some text with OCR",
   "license": "MIT",
   "repository": "rigwild/bulk-files-ocr-search",
