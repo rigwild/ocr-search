@@ -84,20 +84,39 @@ export const ocr = async (filePath: string, tesseractConfig: TesseractConfig = {
 }
 
 /**
- * Extract all the pages of a PDF to images
- * @param filePath Path to the PDF to be converted
- * @returns List of generated output images
+ * Does the file `file.pdf-1.png` exist?
+ * @param filePath Path to the PDF file
+ * @returns The PDF is already extracted
  */
-export const pdfToImages = async (filePath: string): Promise<Array<{ name: string; path: string }>> => {
+export const isPdfAlreadyExtractedToImages = async (filePath: string) => {
   const fileName = path.basename(filePath)
-  // pdftoppm -png file.pdf output-images-prefix
-  await execa('pdftoppm', ['-png', filePath, filePath])
+  let files = await fs.readdir(path.dirname(filePath))
+  return !files.some(x => x === `${fileName}-1.png`)
+}
 
-  // Find the list of created files (we don't know how many pages are in the pdf!)
+/**
+ * Given a PDF file, find its extracted pages images path
+ * @param filePath Path to the PDF file
+ * @returns Extracted pages path
+ */
+export const getPdfExtractedImages = async (filePath: string): Promise<Array<{ name: string; path: string }>> => {
+  const fileName = path.basename(filePath)
   const files = await fs.readdir(path.dirname(filePath))
   return files
     .filter(x => x.startsWith(fileName) && x !== fileName)
-    .map(x => ({ name: x, path: path.resolve(path.dirname(fileName), x) }))
+    .map(x => ({ name: x, path: path.resolve(path.dirname(filePath), x) }))
+}
+
+/**
+ * Extract all the pages of a PDF to PDF images
+ *
+ * @param filePath Path to the PDF to be converted
+ * @returns List of generated output images path
+ */
+export const pdfToImages = async (filePath: string): Promise<Array<{ name: string; path: string }>> => {
+  // pdftoppm -png file.pdf output-images-prefix
+  await execa('pdftoppm', ['-png', filePath, filePath])
+  return getPdfExtractedImages(filePath)
 }
 
 /**

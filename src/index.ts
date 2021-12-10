@@ -13,7 +13,9 @@ import {
   WorkerMethods,
   WorkerPool,
   isSupportedExtension,
-  pdfToImages
+  pdfToImages,
+  isPdfAlreadyExtractedToImages,
+  getPdfExtractedImages
 } from './utils'
 
 export { Progress, ScanOptions, ocr, pdfToImages }
@@ -80,9 +82,15 @@ export const visitFile = async (
 
   // Convert PDF pages to images
   if (file.extension === '.pdf') {
-    // return
-    const images = await pdfToImages(file.path)
-    if (shouldConsoleLog) console.log(`✨ Extracted PDF    ${file.path}`)
+    let images: Array<{ name: string; path: string }> = []
+
+    if (!isPdfAlreadyExtractedToImages(file.path)) {
+      images = await pdfToImages(file.path)
+      if (shouldConsoleLog) console.log(`✨ Extracted PDF    ${file.path}`)
+    } else {
+      images = await getPdfExtractedImages(file.path)
+      if (shouldConsoleLog) console.log(`📄 PDF was ready    ${file.path}`)
+    }
 
     for (const image of images) {
       // Convert to directoryTree format
@@ -91,7 +99,7 @@ export const visitFile = async (
         path: image.path,
         size: -1,
         type: 'file',
-        extension: '.webp'
+        extension: '.png'
       }
       await visitFile(imageTreeFormat, { progress, pool, words, shouldConsoleLog, outputLogFile, tesseractConfig })
     }
