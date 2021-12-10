@@ -103,12 +103,19 @@ export const visitFile = async (
   if (file.extension === '.pdf') {
     let images: Array<{ name: string; path: string }> = []
 
-    if (!(await isPdfAlreadyExtractedToImages(file.path))) {
-      images = await pdfToImages(file.path)
-      if (shouldConsoleLog) console.log(`✨ Extracted PDF    ${file.path}`)
-    } else {
-      images = await getPdfExtractedImages(file.path)
-      if (shouldConsoleLog) console.log(`📄 PDF is ready     ${file.path}`)
+    try {
+      if (!(await isPdfAlreadyExtractedToImages(file.path))) {
+        images = await pdfToImages(file.path)
+        if (shouldConsoleLog) console.log(`✨ Extracted PDF    ${file.path}`)
+      } else {
+        images = await getPdfExtractedImages(file.path)
+        if (shouldConsoleLog) console.log(`📄 PDF is ready     ${file.path}`)
+      }
+    } catch (error: any) {
+      if (shouldConsoleLog) {
+        console.log('💥 ERROR! PDF FAIL! ', file.path)
+        console.error(error)
+      }
     }
 
     for (const image of images) {
