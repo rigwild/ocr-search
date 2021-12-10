@@ -106,7 +106,7 @@ test.serial('scanDir', async t => {
 
   // All should be visited
 
-  t.is(res.visited.size, 16)
+  t.is(res.visited.size, 12)
 
   t.true(res.visited.has(jpg))
   t.true(res.visited.has(pdf))
@@ -164,14 +164,14 @@ test.serial('scanDir', async t => {
 test.serial('scanDir with unmatched word should not match anything', async t => {
   t.timeout(25000)
   const res = await scanDir(scannedDir, { words: ['hey random reader! 👋'], workerPoolSize: 2 })
-  t.is(res.visited.size, 16)
+  t.is(res.visited.size, 12)
   t.is(res.matched.size, 0)
 })
 
 test.serial('scanDir with no words provided should match all', async t => {
   t.timeout(25000)
   const res = await scanDir(scannedDir, { workerPoolSize: 2 })
-  t.is(res.visited.size, 16)
+  t.is(res.visited.size, 12)
 
   // Check words
   ;[...res.matched.values()].forEach(x => t.deepEqual(x.matches, ['MATCH_ALL']))
@@ -186,7 +186,7 @@ test.serial('scanDir should save progress and log file', async t => {
   t.true(await fs.pathExists(outputLogFile))
 
   const progress = /** @type {import('../dist/utils').ProgressJson} */ (await fs.readJSON(progressFile))
-  t.is(progress.visited.length, 16)
+  t.is(progress.visited.length, 12)
 
   // Check words
   Object.values(progress.matched).forEach(x => t.deepEqual(x.matches, ['MATCH_ALL']))
@@ -194,12 +194,12 @@ test.serial('scanDir should save progress and log file', async t => {
   t.true(Object.values(progress.matched).every(x => x.text.includes(expected)))
 })
 
-// test.after(async () => {
-//   await fs.remove(progressFile)
-//   await fs.remove(outputLogFile)
-//   await fs.remove(pdfTemp)
-//   await fs.remove(`${pdfTemp}-1.png`)
-//   await fs.remove(`${pdfTemp}-2.png`)
-//   await fs.remove(`${pdfTemp}-3.png`)
-//   await fs.remove(`${pdfTemp}-4.png`)
-// })
+test.after(async () => {
+  await fs.remove(progressFile)
+  await fs.remove(outputLogFile)
+  await fs.remove(pdfTemp)
+  await fs.remove(`${pdfTemp}-1.png`)
+  await fs.remove(`${pdfTemp}-2.png`)
+  await fs.remove(`${pdfTemp}-3.png`)
+  await fs.remove(`${pdfTemp}-4.png`)
+})

@@ -167,11 +167,8 @@ console.log(text)
 
 const filePdf = path.resolve(__dirname, '..', 'test', '_testFiles', 'sample.pdf')
 
-// Extracted pages output format
-const format: string | undefined = 'jpg'
-
 // PDF to images
-const res = await pdfToImages(filePdf, format)
+const res = await pdfToImages(filePdf)
 console.log(res) // Files are generated on the file system, 1 file per page
 ```
 
