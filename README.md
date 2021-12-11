@@ -165,6 +165,9 @@ export type ScanOptions = {
    */
   words?: string[]
 
+  /** Should the OCR scanned content of each file be saved to a txt file (e.g. "file.png.txt") */
+  saveOcr?: string[]
+
   /** Should the logs be printed to the console? (default = false) */
   shouldConsoleLog?: boolean
 

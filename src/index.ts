@@ -77,6 +77,9 @@ export const visitFile = async (
 
   if (options.ignoreExt?.has(file.extension!)) {
     if (options.shouldConsoleLog) logProgress(visitedCount, totalFilesCount, `☢️ Ignored .ext    ${file.path}`)
+    // Mark as visited
+    progress.visited.add(file.path)
+    visitedCount++
     return
   }
 
@@ -102,12 +105,7 @@ export const visitFile = async (
 
     try {
       if (!(await isPdfAlreadyExtractedToImages(file.path))) {
-        let first: number | undefined = undefined
-        let last: number | undefined = undefined
-        if (options.pdfExtractFirst) first = options.pdfExtractFirst
-        if (options.pdfExtractLast) last = options.pdfExtractLast
-
-        images = await pdfToImages(file.path, first, last)
+        images = await pdfToImages(file.path, options.pdfExtractFirst, options.pdfExtractLast)
         totalFilesCount += images.length
 
         if (options.shouldConsoleLog) logProgress(visitedCount, totalFilesCount, `✨ Extracted PDF    ${file.path}`)
@@ -118,9 +116,10 @@ export const visitFile = async (
         if (options.shouldConsoleLog) logProgress(visitedCount, totalFilesCount, `📄 PDF is ready     ${file.path}`)
       }
     } catch (error: any) {
-      {
-        console.log('💥 ERROR! PDF FAIL! ', file.path)
+      if (options.shouldConsoleLog) {
+        logProgress(visitedCount, totalFilesCount, `💥 ERROR! PDF FAIL! ${file.path}`)
         console.error(error)
+        // FIXME: Should the error be bubbled up for programmatic usage?
       }
     }
 
@@ -147,6 +146,9 @@ export const visitFile = async (
   pool.queue(async ({ scanFile }: WorkerMethods) => {
     try {
       const scanRes = await scanFile(file, options.words, options.tesseractConfig)
+
+      if (options.saveOcr) await fs.promises.writeFile(`${file.path}.txt`, scanRes.text)
+
       if (scanRes && scanRes.matches.length > 0) {
         let str = ''
         str += `✅ MATCH!           ${file.path}`
@@ -171,11 +173,11 @@ export const visitFile = async (
         if (options.shouldConsoleLog) logProgress(visitedCount, totalFilesCount, `❌ No words matched ${file.path}`)
       }
     } catch (error: any) {
-      {
-        console.log('💥 ERROR! Scan fail ', file.path)
+      if (options.shouldConsoleLog) {
+        logProgress(visitedCount, totalFilesCount, `💥 ERROR! Scan fail ${file.path}`)
         console.error(error)
+        // FIXME: Should the error be bubbled up for programmatic usage?
       }
-      // FIXME: Should the error be bubbled up for programmatic usage?
     }
 
     // Mark as visited

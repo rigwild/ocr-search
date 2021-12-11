@@ -35,6 +35,7 @@ const cli = meow(
     --words List of comma-separated words to search (if "MATCH_ALL", will match everything for mass OCR extraction)
     
   Options
+    --save-ocr          Save the OCR scanned content of each file to a txt file (e.g. "file.png.txt")
     --ignoreExt         List of comma-separated file extensions to ignore
     --pdfExtractFirst   Range start of the pages to extract from PDF files (1-indexed)
     --pdfExtractLast    Range end of the pages to extract from PDF files, last page if overflow (1-indexed)
@@ -54,8 +55,8 @@ const cli = meow(
     Scan the "scanned-dir" directory and match all the files containing "system", "wiki" and "hello"
       $ ocr-search --words "system,wiki,hello" scanned-dir
 
-    Scan the glob-matched files "*" and match all files (mass OCR text extraction)
-      $ ocr-search --words MATCH_ALL *
+    Scan the glob-matched files "*", match all, and save each file content (mass OCR text extraction)
+      $ ocr-search --words MATCH_ALL --save-ocr *
 
     Skip .pdf and .webp files
       $ ocr-search --words "wiki,hello" --ignoreExt "pdf,webp" scanned-dir
@@ -79,6 +80,10 @@ const cli = meow(
       words: {
         type: 'string',
         isRequired: true
+      },
+      saveOcr: {
+        type: 'boolean',
+        default: false
       },
       consoleLogs: {
         type: 'boolean',
@@ -125,6 +130,7 @@ const cli = meow(
 /** @type {import('../dist/utils.js').ScanOptions} */
 const config = {
   words: cli.flags.words && cli.flags.words !== 'MATCH_ALL' ? cli.flags.words.split(',') : undefined,
+  saveOcr: cli.flags.saveOcr,
   shouldConsoleLog: cli.flags.consoleLogs,
   progressFile: cli.flags.progressFile !== 'none' ? cli.flags.progressFile : undefined,
   shouldConsoleLogMatches: cli.flags.showMatches,
