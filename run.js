@@ -1,6 +1,6 @@
 // @ts-check
 const path = require('path')
-const { scanDir } = require('./dist/index') // bulk-files-ocr-search
+const { scanDir } = require('./dist/index') // ocr-search
 
 const words = ['hello', 'match this', '<<<<<']
 

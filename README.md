@@ -1,9 +1,9 @@
-# Bulk Files OCR Text Finder
+# OCR Search
 
-[![Node.js CI](https://github.com/rigwild/bulk-files-ocr-search/workflows/Node.js%20CI/badge.svg)](https://github.com/rigwild/bulk-files-ocr-search/actions)
-[![npm package](https://img.shields.io/npm/v/bulk-files-ocr-search.svg?logo=npm)](https://www.npmjs.com/package/bulk-files-ocr-search)
-[![npm downloads](https://img.shields.io/npm/dw/bulk-files-ocr-search)](https://www.npmjs.com/package/bulk-files-ocr-search)
-[![license](https://img.shields.io/npm/l/bulk-files-ocr-search?color=blue)](./LICENSE)
+[![Node.js CI](https://github.com/rigwild/ocr-search/workflows/Node.js%20CI/badge.svg)](https://github.com/rigwild/ocr-search/actions)
+[![npm package](https://img.shields.io/npm/v/ocr-search.svg?logo=npm)](https://www.npmjs.com/package/ocr-search)
+[![npm downloads](https://img.shields.io/npm/dw/ocr-search)](https://www.npmjs.com/package/ocr-search)
+[![license](https://img.shields.io/npm/l/ocr-search?color=blue)](./LICENSE)
 
 🔍 Find files that contain some text with [OCR](https://en.wikipedia.org/wiki/Optical_character_recognition).
 
@@ -56,7 +56,7 @@ sudo cp fra.traineddata /usr/share/tesseract-ocr/4.00/tessdata/
 This will install the `ocr-search` CLI.
 
 ```sh
-pnpm i -g bulk-files-ocr-search
+pnpm i -g ocr-search
 ```
 
 ```
@@ -66,6 +66,9 @@ $ ocr-search --help
 
   Usage
     $ ocr-search --words "<words_list>" <input_files>
+
+  To delete images created from PDF files pages extractions, check the other provided command:
+    $ ocr-search --help
 
   Required
     --words List of comma-separated words to search (if "MATCH_ALL", will match everything for mass OCR extraction)
@@ -102,27 +105,27 @@ $ ocr-search --help
     Use a specific Tesseract OCR configuration
       $ ocr-search --words "wiki,hello" --lang fra --oem 1 --psm 3 scanned-dir
 
-  https://github.com/rigwild/bulk-files-ocr-search
+  https://github.com/rigwild/ocr-search
 ```
 
 Another CLI is provided to easily remove all extracted PDF pages images.
 
 ```
-$ ocr-search-clean-extracted --help
+$ ocr-search-clean --help
 
   🗑️ Find and remove all images from PDF pages extractions
 
   Usage
-    $ ocr-search-clean-extracted <input_files>
+    $ ocr-search-clean <input_files>
 
-  https://github.com/rigwild/bulk-files-ocr-search
+  https://github.com/rigwild/ocr-search
 ```
 
 ## Use with provided runner
 
 ```sh
-git clone bulk-files-ocr-search
-cd bulk-files-ocr-search
+git clone https://github.com/rigwild/ocr-search.git
+cd ocr-search
 pnpm install # or npm install -D
 pnpm build
 ```
@@ -144,14 +147,14 @@ See [`run.js`](./run.js).
 ### Install
 
 ```sh
-pnpm i bulk-files-ocr-search
+pnpm i ocr-search
 ```
 
 ### Directory scan
 
 ```ts
 import path from 'path'
-import { scanDir, TesseractConfig } from 'bulk-files-ocr-search'
+import { scanDir, TesseractConfig } from 'ocr-search'
 
 // The list of options
 export type ScanOptions = {
@@ -222,7 +225,7 @@ console.timeEnd('scan')
 
 ```ts
 import path from 'path'
-import { ocr } from 'bulk-files-ocr-search'
+import { ocr } from 'ocr-search'
 
 const file = path.resolve(__dirname, '..', 'test', '_testFiles', 'sample.jpg')
 
@@ -242,7 +245,7 @@ Convert PDF pages to PNG. Files are generated on the file system, 1 file per PDF
 
 ```ts
 import path from 'path'
-import { pdfToImages } from 'bulk-files-ocr-search'
+import { pdfToImages } from 'ocr-search'
 
 const filePdf = path.resolve(__dirname, '..', 'test', '_testFiles', 'sample.pdf')
 
@@ -253,4 +256,4 @@ console.log(res) // Paths to generated PNG files
 
 ## License
 
-[The MIT License](./LICENSE)
+[GNU Affero General Public License v3.0](./LICENSE)

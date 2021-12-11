@@ -1,9 +1,9 @@
 {
-  "name": "bulk-files-ocr-search",
-  "version": "0.1.5",
+  "name": "ocr-search",
+  "version": "1.0.0",
   "description": "🔍 Find files that contain some text with OCR",
-  "license": "MIT",
-  "repository": "rigwild/bulk-files-ocr-search",
+  "license": "AGPL-3.0-or-later",
+  "repository": "rigwild/ocr-search",
   "author": {
     "name": "rigwild",
     "email": "me@rigwild.dev",
@@ -17,7 +17,7 @@
   "readme": "README.md",
   "bin": {
     "ocr-search": "bin/cli.mjs",
-    "ocr-search-clean-extracted": "bin/cleanExtracted.mjs"
+    "ocr-search-clean": "bin/cleanExtracted.mjs"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

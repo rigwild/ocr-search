@@ -1,5 +1,23 @@
 #!/usr/bin/env node
 
+/**
+ * OCR Search - 🔍 Find files that contain some text with OCR
+ * Copyright (C) 2021  rigwild <me@rigwild.dev> (https://github.com/rigwild)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 // @ts-check
 
 import fs from 'fs-extra'
@@ -9,9 +27,9 @@ import dirTree from 'directory-tree'
 const cli = meow(
   `
   Usage
-    $ ocr-search-clean-extracted <input_files>
+    $ ocr-search-clean <input_files>
 
-  https://github.com/rigwild/bulk-files-ocr-search
+  https://github.com/rigwild/ocr-search
 `,
   {
     // @ts-ignore
