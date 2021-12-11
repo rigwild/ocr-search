@@ -59,7 +59,7 @@ This will install the `ocr-search` CLI.
 pnpm i -g bulk-files-ocr-search
 ```
 
-```sh
+```
   🔍 Find files that contain some text with OCR
 
   Usage
@@ -69,10 +69,15 @@ pnpm i -g bulk-files-ocr-search
     --words List of comma-separated words to search (if "MATCH_ALL", will match everything for mass OCR extraction)
 
   Options
-    --progressFile     File to save progress to, will start from where it stopped last time by looking there (none="none")  [default="progress.json"]
-    --matchesLogFile   Log all matches to this file (none="none") [default="matches.txt"]
-    --no-console-logs  Silence console logs
-    --workers          Amount of worker threads to use (default is total CPU cores count - 2)
+    --ignoreExt         List of comma-separated file extensions to ignore
+    --pdfExtractFirst   Range start of the pages to extract from PDF files (1-indexed)
+    --pdfExtractLast    Range end of the pages to extract from PDF files, last page if overflow (1-indexed)
+    --progressFile      File to save progress to, will start from where it
+                        stopped last time by looking there (no file, use "none")  [default="progress.json"]
+    --matchesLogFile    Log all matches to this file (no file, use "none") [default="matches.txt"]
+    --no-console-logs   Silence all console logs
+    --no-show-matches   Do not print matched files text content to the console [default="false"]
+    --workers           Amount of worker threads to use (default is total CPU cores count - 2)
 
   OCR Options - See https://github.com/tesseract-ocr/tesseract/blob/main/doc/tesseract.1.asc
     --lang  Tesseract OCR LANG configuration [default="eng"]
@@ -86,11 +91,14 @@ pnpm i -g bulk-files-ocr-search
     Scan the glob-matched files "*" and match all files (mass OCR text extraction)
       $ ocr-search --words MATCH_ALL *
 
+    Skip .pdf and .webp files
+      $ ocr-search --words "wiki,hello" --ignoreExt "pdf,webp" scanned-dir
+
+    Extract only page 3 to 6 in all PDF files (1-indexed)
+      $ ocr-search --words "wiki,hello" --pdfExtractFirst 3 --pdfExtractLast 6 scanned-dir
+
     Use a specific Tesseract OCR configuration
       $ ocr-search --words "wiki,hello" --lang fra --oem 1 --psm 3 scanned-dir
-
-    Do not save progress and do not log matches to file
-      $ ocr-search --words "wiki,hello" --progressFile none --matchesLogFile none scanned-dir
 
   https://github.com/rigwild/bulk-files-ocr-search
 ```
@@ -137,12 +145,13 @@ export type ScanOptions = {
    *
    * If not provided, every files will get matched (useful to do mass OCR and save the result)
    */
-  words: string[] | ['MATCH_ALL']
+  words?: string[]
 
-  /**
-   * Should the logs be printed to the console? (default = false)
-   */
+  /** Should the logs be printed to the console? (default = false) */
   shouldConsoleLog?: boolean
+
+  /** Should the matches file content be printed to the console? (default = true) */
+  shouldConsoleLogMatches?: boolean
 
   /**
    * If provided, the progress will be saved to a file
@@ -151,10 +160,17 @@ export type ScanOptions = {
    */
   progressFile?: string
 
-  /**
-   * If provided, every file path and their text content that were matched are logged to this file
-   */
+  /** If provided, every file path and their text content that were matched are logged to this file */
   matchesLogFile?: string
+
+  /** File extensions to ignore when looking for files */
+  ignoreExt?: Set<string>
+
+  /* Extract PDF files starting at this page, first page is 1 (1-indexed) (default = 1) */
+  pdfExtractFirst?: number
+
+  /* Extract PDF files until this page, last page if overflow (1-indexed) (default = last page of PDF file) */
+  pdfExtractLast?: number
 
   /**
    * Amount of worker threads to use (default = your total CPU cores - 2)
@@ -164,27 +180,22 @@ export type ScanOptions = {
   workerPoolSize?: number
 
   /**
-   * Tesseract OCR config, will default to `{ lang: 'eng', oem: 1, psm: 1 }`
+   * Tesseract OCR config, will default `{ lang: 'eng', oem: 1, psm: 1 }`
    *
    * @see https://github.com/tesseract-ocr/tesseract/blob/main/doc/tesseract.1.asc
    */
   tesseractConfig?: TesseractConfig
 }
 
-const words = ['hello', 'match this', '<<<<<']
-
 const scannedDir = path.resolve(__dirname, 'data')
-const progressFile = path.resolve(__dirname, 'progress.json')
-const matchesLogFile = path.resolve(__dirname, 'matches.txt')
-const tesseractConfig: TesseractConfig = { lang: 'eng', oem: 1, psm: 1 }
+const words = ['hello', 'match this', '<<<<<']
+const tesseractConfig: TesseractConfig = { lang: 'fra', oem: 1, psm: 1 }
 
 console.time('scan')
 
 await scanDir(scannedDir, {
   words,
   shouldConsoleLog: true,
-  progressFile,
-  matchesLogFile,
   tesseractConfig
 })
 
@@ -220,7 +231,8 @@ import { pdfToImages } from 'bulk-files-ocr-search'
 
 const filePdf = path.resolve(__dirname, '..', 'test', '_testFiles', 'sample.pdf')
 
-const res = await pdfToImages(filePdf)
+// Extract from page 1 to page 3 (1-indexed)
+const res = await pdfToImages(filePdf, 1, 3)
 console.log(res) // Paths to generated PNG files
 ```
 

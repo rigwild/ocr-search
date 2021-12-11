@@ -11,12 +11,13 @@ export type ScanOptions = {
    *
    * If not provided, every files will get matched (useful to do mass OCR and save the result)
    */
-  words?: string[] | ['MATCH_ALL']
+  words?: string[]
 
-  /**
-   * Should the logs be printed to the console? (default = false)
-   */
+  /** Should the logs be printed to the console? (default = false) */
   shouldConsoleLog?: boolean
+
+  /** Should the matches file content be printed to the console? (default = true) */
+  shouldConsoleLogMatches?: boolean
 
   /**
    * If provided, the progress will be saved to a file
@@ -25,10 +26,17 @@ export type ScanOptions = {
    */
   progressFile?: string
 
-  /**
-   * If provided, every file path and their text content that were matched are logged to this file
-   */
+  /** If provided, every file path and their text content that were matched are logged to this file */
   matchesLogFile?: string
+
+  /** File extensions to ignore when looking for files */
+  ignoreExt?: Set<string>
+
+  /* Extract PDF files starting at this page, first page is 1 (1-indexed) (default = 1) */
+  pdfExtractFirst?: number
+
+  /* Extract PDF files until this page, last page if overflow (1-indexed) (default = last page of PDF file) */
+  pdfExtractLast?: number
 
   /**
    * Amount of worker threads to use (default = your total CPU cores - 2)
@@ -61,6 +69,11 @@ export const cleanStr = (str: string) =>
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
+
+export const logProgress = (visitedCount: number, totalFilesCount: number, str: string) => {
+  const visitedCountPadded = visitedCount.toString().padStart(totalFilesCount.toString().length)
+  console.log(`[${visitedCountPadded}/${totalFilesCount}] ${str}`)
+}
 
 /**
  * @param filePath Path to the image to extract text from
@@ -113,9 +126,16 @@ export const getPdfExtractedImages = async (filePath: string): Promise<Array<{ n
  * @param filePath Path to the PDF to be converted
  * @returns List of generated output images path
  */
-export const pdfToImages = async (filePath: string): Promise<Array<{ name: string; path: string }>> => {
-  // pdftoppm -png file.pdf output-images-prefix
-  await execa('pdftoppm', ['-png', filePath, filePath])
+export const pdfToImages = async (
+  filePath: string,
+  firstPage?: number,
+  lastPage?: number
+): Promise<Array<{ name: string; path: string }>> => {
+  // pdftoppm -f 1 -l 5 -png file.pdf output-images-prefix
+  const pageParams: string[] = []
+  if (firstPage) pageParams.push('-f', `${firstPage}`)
+  if (lastPage) pageParams.push('-l', `${lastPage}`)
+  await execa('pdftoppm', [...pageParams, '-png', filePath, filePath])
   return getPdfExtractedImages(filePath)
 }
 
@@ -163,11 +183,32 @@ export const saveProgress = async (progressFile: string, progress: Progress): Pr
     visited: [...progress.visited],
     matched: Object.fromEntries([...progress.matched.entries()])
   }
-
   await fs.writeJson(progressFile, progressJson, { spaces: 2 })
 }
 
+export const getTreeFilesCount = (tree: dirTree.DirectoryTree) => {
+  let count = 0
+  if (tree.type === 'file') {
+    count++
+  } else if (tree.type === 'directory' && tree.children) {
+    tree.children.forEach(x => (count += getTreeFilesCount(x)))
+  }
+  return count
+}
+
 export const getTree = async (scannedDir: string) => {
-  if (!(await fs.pathExists(scannedDir))) throw new Error('Directory not found')
-  return dirTree(scannedDir, { attributes: ['size', 'type', 'extension'] })
+  if (!(await fs.pathExists(scannedDir))) throw new Error('File or directory not found')
+
+  const tree = dirTree(scannedDir, { attributes: ['type', 'extension'] })
+
+  // Convert all relative paths to absolute paths
+  const relativeToAbsolute = (tree: dirTree.DirectoryTree) => {
+    tree.path = path.resolve(tree.path)
+    if (tree.type === 'directory' && tree.children) {
+      tree.children.forEach(relativeToAbsolute)
+    }
+  }
+  relativeToAbsolute(tree)
+
+  return tree
 }

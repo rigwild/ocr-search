@@ -33,11 +33,13 @@ const webp315 = path.resolve(rotatedDir, 'webp315.webp')
 
 const progressFile = path.resolve(tempFiles, 'progress.json')
 const matchesLogFile = path.resolve(tempFiles, 'log.txt')
+
 const pdfTemp = path.resolve(tempFiles, 'pdf.pdf')
+const pdf2Temp = path.resolve(tempFiles, 'pdf2.pdf')
 
 const expected = 'through a model of open collaboration, using a wiki-based editing system'
 
-test('pdf pages extracted to png images', async t => {
+test('pdf extract all pages to png images', async t => {
   t.timeout(25000)
   await fs.copyFile(pdf, pdfTemp)
 
@@ -50,6 +52,19 @@ test('pdf pages extracted to png images', async t => {
   t.true(await fs.pathExists(`${pdfTemp}-2.png`))
   t.true(await fs.pathExists(`${pdfTemp}-3.png`))
   t.true(await fs.pathExists(`${pdfTemp}-4.png`))
+})
+
+test('pdf extract some pages to png images', async t => {
+  t.timeout(25000)
+  await fs.copyFile(pdf, pdf2Temp)
+
+  const res = await pdfToImages(pdf2Temp, 2, 3)
+  t.is(res[0].name, `${path.basename(pdf2Temp)}-2.png`)
+  t.is(res[1].name, `${path.basename(pdf2Temp)}-3.png`)
+  t.false(await fs.pathExists(`${pdf2Temp}-1.png`))
+  t.true(await fs.pathExists(`${pdf2Temp}-2.png`))
+  t.true(await fs.pathExists(`${pdf2Temp}-3.png`))
+  t.false(await fs.pathExists(`${pdf2Temp}-4.png`))
 })
 
 test('ocr avif is not supported', async t => {
@@ -197,9 +212,14 @@ test.serial('scanDir should save progress and log file', async t => {
 test.after(async () => {
   await fs.remove(progressFile)
   await fs.remove(matchesLogFile)
+
   await fs.remove(pdfTemp)
   await fs.remove(`${pdfTemp}-1.png`)
   await fs.remove(`${pdfTemp}-2.png`)
   await fs.remove(`${pdfTemp}-3.png`)
   await fs.remove(`${pdfTemp}-4.png`)
+
+  await fs.remove(pdf2Temp)
+  await fs.remove(`${pdf2Temp}-2.png`)
+  await fs.remove(`${pdf2Temp}-3.png`)
 })
