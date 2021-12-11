@@ -60,6 +60,8 @@ pnpm i -g bulk-files-ocr-search
 ```
 
 ```
+$ ocr-search --help
+
   🔍 Find files that contain some text with OCR
 
   Usage
@@ -99,6 +101,19 @@ pnpm i -g bulk-files-ocr-search
 
     Use a specific Tesseract OCR configuration
       $ ocr-search --words "wiki,hello" --lang fra --oem 1 --psm 3 scanned-dir
+
+  https://github.com/rigwild/bulk-files-ocr-search
+```
+
+Another CLI is provided to easily remove all extracted PDF pages images.
+
+```
+$ ocr-search-clean-extracted --help
+
+  🗑️ Find and remove all images from PDF pages extractions
+
+  Usage
+    $ ocr-search-clean-extracted <input_files>
 
   https://github.com/rigwild/bulk-files-ocr-search
 ```
