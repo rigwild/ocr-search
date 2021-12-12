@@ -38,27 +38,44 @@ const cli = meow(
   {
     // @ts-ignore
     importMeta: import.meta,
-    description: '🗑️ Find and remove all images from PDF pages extractions'
+    description: '🗑️ Find and remove all images from PDF pages extractions',
+    flags: {
+      pdf: {
+        type: 'boolean',
+        default: false
+      },
+      txt: {
+        type: 'boolean',
+        default: false
+      }
+    }
   }
 )
 
 /** @param {dirTree.DirectoryTree} tree */
 const cleanExtractedRecursive = async tree => {
+  let removedCount = 0
   if (tree.type === 'file') {
-    if (tree.name.match(/^.+\.pdf-\d+\.png$/) || tree.name.match(/^.+\.pdf\.txt$/)) {
+    if (
+      (cli.flags.pdf && tree.name.match(/^.+\.pdf-\d+\.png$/)) ||
+      (cli.flags.txt && tree.name.match(/^.+\.\w+\.ocr-content.txt$/))
+    ) {
       await fs.remove(tree.path)
       console.log(`Removed ${tree.path}`)
+      removedCount++
     }
   } else if (tree.type === 'directory' && tree.children) {
     for (const child of tree.children) {
-      await cleanExtractedRecursive(child)
+      removedCount += await cleanExtractedRecursive(child)
     }
   }
+  return removedCount
 }
 
 ;(async () => {
   for (const input of cli.input) {
     const tree = dirTree(input, { attributes: ['type'] })
-    await cleanExtractedRecursive(tree)
+    const removedCount = await cleanExtractedRecursive(tree)
+    console.log(`${removedCount} files were removed!`)
   }
 })()
