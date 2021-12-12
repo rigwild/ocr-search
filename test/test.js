@@ -58,7 +58,6 @@ const pdf2Temp = path.resolve(tempFiles, 'pdf2.pdf')
 const expected = 'through a model of open collaboration, using a wiki-based editing system'
 
 test('pdf extract all pages to png images', async t => {
-  t.timeout(25000)
   await fs.copyFile(pdf, pdfTemp)
 
   const res = await pdfToImages(pdfTemp)
@@ -73,7 +72,6 @@ test('pdf extract all pages to png images', async t => {
 })
 
 test('pdf extract some pages to png images', async t => {
-  t.timeout(25000)
   await fs.copyFile(pdf, pdf2Temp)
 
   const res = await pdfToImages(pdf2Temp, 2, 3)
@@ -84,6 +82,8 @@ test('pdf extract some pages to png images', async t => {
   t.true(await fs.pathExists(`${pdf2Temp}-3.png`))
   t.false(await fs.pathExists(`${pdf2Temp}-4.png`))
 })
+
+// --
 
 test('ocr avif is not supported', async t => {
   await t.throwsAsync(ocr(avif))
@@ -138,9 +138,7 @@ test.serial('scanDir', async t => {
   const res = await scanDir(scannedDir, { words: expected.split(' '), workerPoolSize: 2 })
 
   // All should be visited
-
-  t.is(res.visited.size, 12)
-
+  t.is(res.visited.size, 20)
   t.true(res.visited.has(jpg))
   t.true(res.visited.has(pdf))
   t.true(res.visited.has(`${pdf}-1.png`))
@@ -149,15 +147,23 @@ test.serial('scanDir', async t => {
   t.true(res.visited.has(`${pdf}-4.png`))
   t.true(res.visited.has(png))
   t.true(res.visited.has(webp))
-
   t.true(res.visited.has(avif))
   t.true(res.visited.has(jxl))
   t.true(res.visited.has(wp2))
 
-  // --
+  t.true(res.visited.has(`${jpg}.ocr-content.txt`))
+  t.false(res.visited.has(`${pdf}.ocr-content.txt`)) // Not generated!
+  t.true(res.visited.has(`${pdf}-1.png.ocr-content.txt`))
+  t.true(res.visited.has(`${pdf}-2.png.ocr-content.txt`))
+  t.true(res.visited.has(`${pdf}-3.png.ocr-content.txt`))
+  t.true(res.visited.has(`${pdf}-4.png.ocr-content.txt`))
+  t.true(res.visited.has(`${png}.ocr-content.txt`))
+  t.true(res.visited.has(`${webp}.ocr-content.txt`))
+  t.false(res.visited.has(`${avif}.ocr-content.txt`))
+  t.false(res.visited.has(`${jxl}.ocr-content.txt`))
+  t.false(res.visited.has(`${wp2}.ocr-content.txt`))
 
   // Only supported should be matched
-
   t.true(res.matched.has(jpg))
   t.false(res.matched.has(pdf))
   t.true(res.visited.has(`${pdf}-1.png`))
@@ -166,15 +172,11 @@ test.serial('scanDir', async t => {
   t.true(res.visited.has(`${pdf}-4.png`))
   t.true(res.matched.has(png))
   t.true(res.matched.has(webp))
-
   t.false(res.matched.has(avif))
   t.false(res.matched.has(jxl))
   t.false(res.matched.has(wp2))
 
-  // --
-
   // All words should be matched
-
   t.deepEqual(res.matched.get(jpg).matches, expected.split(' '))
   t.deepEqual(res.matched.get(`${pdf}-1.png`).matches, expected.split(' '))
   t.deepEqual(res.matched.get(`${pdf}-2.png`).matches, expected.split(' '))
@@ -184,7 +186,6 @@ test.serial('scanDir', async t => {
   t.deepEqual(res.matched.get(webp).matches, expected.split(' '))
 
   // Extracted content should be valid
-
   t.true(res.matched.get(jpg).text.includes(expected))
   t.true(res.matched.get(`${pdf}-1.png`).text.includes(expected))
   t.true(res.matched.get(`${pdf}-2.png`).text.includes(expected))
@@ -194,37 +195,58 @@ test.serial('scanDir', async t => {
   t.true(res.matched.get(webp).text.includes(expected))
 })
 
-test.serial('scanDir with unmatched word should not match anything', async t => {
-  t.timeout(25000)
-  const res = await scanDir(scannedDir, { words: ['hey random reader! 👋'], workerPoolSize: 2 })
-  t.is(res.visited.size, 12)
+test('scanDir with unmatched word should match nothing', async t => {
+  process.env.FAKE_OCR_TEXT = expected
+  const config = /** @type {Parameters<typeof scanDir>[1] & { fakeScan: { text: string; matches: string[] } }} */ ({
+    words: ['hey random reader! 👋'],
+    workerPoolSize: 2
+  })
+  const res = await scanDir(scannedDir, config)
+
+  t.is(res.visited.size, 20)
   t.is(res.matched.size, 0)
 })
 
-test.serial('scanDir with no words provided should match all', async t => {
-  t.timeout(25000)
-  const res = await scanDir(scannedDir, { workerPoolSize: 2 })
-  t.is(res.visited.size, 12)
+test('scanDir with no words provided should match all', async t => {
+  process.env.FAKE_OCR_TEXT = expected
+  const res = await scanDir(scannedDir, {
+    workerPoolSize: 2
+  })
 
-  // Check words
+  t.is(res.visited.size, 20)
+  t.is(res.matched.size, 8)
   ;[...res.matched.values()].forEach(x => t.deepEqual(x.matches, ['MATCH_ALL']))
-  // Check text
-  t.true([...res.matched.values()].every(x => x.text.includes(expected)))
 })
 
-test.serial('scanDir should save progress and log file', async t => {
-  t.timeout(25000)
-  await scanDir(scannedDir, { progressFile, matchesLogFile, workerPoolSize: 2 })
+test('scanDir should save progress, ocr-content .txt files and log file', async t => {
+  process.env.FAKE_OCR_TEXT = expected
+  await scanDir(scannedDir, {
+    progressFile,
+    matchesLogFile,
+    saveOcr: true,
+    workerPoolSize: 2
+  })
+
   t.true(await fs.pathExists(progressFile))
   t.true(await fs.pathExists(matchesLogFile))
 
   const progress = /** @type {import('../dist/utils').ProgressJson} */ (await fs.readJSON(progressFile))
-  t.is(progress.visited.length, 12)
 
-  // Check words
+  t.is(progress.visited.length, 20)
+  t.is(Object.keys(progress.matched).length, 8)
   Object.values(progress.matched).forEach(x => t.deepEqual(x.matches, ['MATCH_ALL']))
-  // Check text
-  t.true(Object.values(progress.matched).every(x => x.text.includes(expected)))
+})
+
+test('scanDir should ignore extensions', async t => {
+  process.env.FAKE_OCR_TEXT = expected
+  const res = await scanDir(scannedDir, {
+    ignoreExt: new Set(['.pdf', '.jpg', '.webp']),
+    workerPoolSize: 2
+  })
+
+  t.is(res.visited.size, 20)
+  t.is(res.matched.size, 5)
+  ;[...res.matched.values()].forEach(x => t.deepEqual(x.matches, ['MATCH_ALL']))
 })
 
 test.after(async () => {

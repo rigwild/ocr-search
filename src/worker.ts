@@ -17,6 +17,6 @@
  */
 
 import { expose } from 'threads/worker'
-import { scanFile } from './utils'
+import { scanFile, pdfToImages } from './utils'
 
-expose({ scanFile })
+expose({ scanFile, pdfToImages })

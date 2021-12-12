@@ -44,63 +44,15 @@ let scannedFilesSinceLastSaveProgressCount = 0
 let visitedCount = 1
 let totalFilesCount = 0
 
-/** Internal function */
-export const visitDir = async (
-  dir: dirTree.DirectoryTree,
-  progress: Progress,
-  pool: WorkerPool,
-  options: Omit<ScanOptions, 'workerPoolSize'>
-) => {
-  if (options.shouldConsoleLog)
-    console.log(`${' '.repeat(totalFilesCount.toString().length * 2 + 3)} 🔍 Scan directory   ${dir.path}`)
-
-  for (const child of dir.children!) {
-    if (child.type === 'file') await visitFile(child, progress, pool, options)
-    else if (child.type === 'directory') await visitDir(child, progress, pool, options)
-  }
-
-  await pool.settled(true)
-  if (options.progressFile) await saveProgress(options.progressFile, progress)
-
-  // We do not mark directories as visited in case the user adds new files
-  // in them in the future!
-}
-
-/** Internal function */
-export const visitFile = async (
+/** Add a pool task to convert PDF pages to images */
+function treatPdfFile(
   file: dirTree.DirectoryTree,
   progress: Progress,
   pool: WorkerPool,
   options: Omit<ScanOptions, 'workerPoolSize'>
-) => {
-  if (file.name === '.gitkeep') return
-
-  if (options.ignoreExt?.has(file.extension!)) {
-    if (options.shouldConsoleLog) logProgress(visitedCount, totalFilesCount, `☢️ Ignored .ext    ${file.path}`)
-    // Mark as visited
-    progress.visited.add(file.path)
-    visitedCount++
-    return
-  }
-
-  if (!isSupportedExtension(file.extension!)) {
-    if (options.shouldConsoleLog) logProgress(visitedCount, totalFilesCount, `👽 Unsupported file ${file.path}`)
-    // Mark as visited
-    progress.visited.add(file.path)
-    visitedCount++
-    return
-  }
-
-  if (progress.visited.has(file.path)) {
-    if (options.shouldConsoleLog) logProgress(visitedCount, totalFilesCount, `⏩ Skip visited     ${file.path}`)
-    visitedCount++
-    return
-  }
-
-  // Convert PDF pages to images
-  if (file.extension === '.pdf') {
+) {
+  const task = pool.queue(async ({ pdfToImages }: WorkerMethods) => {
     let images: Array<{ name: string; path: string }> = []
-
     let hasAlreadyExtractedPdf = false
 
     try {
@@ -136,18 +88,31 @@ export const visitFile = async (
         await visitFile(imageTreeFormat, progress, pool, options)
       }
     }
+  })
 
-    // Mark PDF as visited to not convert it again
+  task.then(() => {
+    // Mark visited
     progress.visited.add(file.path)
     visitedCount++
+  })
+}
+
+function treatFile(
+  file: dirTree.DirectoryTree,
+  progress: Progress,
+  pool: WorkerPool,
+  options: Omit<ScanOptions, 'workerPoolSize'>
+) {
+  if (file.extension === '.pdf') {
+    treatPdfFile(file, progress, pool, options)
     return
   }
 
-  pool.queue(async ({ scanFile }: WorkerMethods) => {
+  const task = pool.queue(async ({ scanFile }: WorkerMethods) => {
     try {
       const scanRes = await scanFile(file, options.words, options.tesseractConfig)
 
-      if (options.saveOcr) await fs.promises.writeFile(`${file.path}.txt`, scanRes.text)
+      if (options.saveOcr) await fs.promises.writeFile(`${file.path}.ocr-content.txt`, scanRes.text)
 
       if (scanRes && scanRes.matches.length > 0) {
         let str = ''
@@ -179,7 +144,9 @@ export const visitFile = async (
         // FIXME: Should the error be bubbled up for programmatic usage?
       }
     }
+  })
 
+  task.then(async () => {
     // Mark as visited
     progress.visited.add(file.path)
     visitedCount++
@@ -195,7 +162,70 @@ export const visitFile = async (
   })
 }
 
-export const scanDir = async (scannedDir: string, options: ScanOptions = {}) => {
+async function visitDir(
+  dir: dirTree.DirectoryTree,
+  progress: Progress,
+  pool: WorkerPool,
+  options: Omit<ScanOptions, 'workerPoolSize'>
+) {
+  if (options.shouldConsoleLog)
+    console.log(`${' '.repeat(totalFilesCount.toString().length * 2 + 3)} 🔍 Scan directory   ${dir.path}`)
+
+  for (const child of dir.children!) {
+    await visit(child, progress, pool, options)
+  }
+
+  await pool.settled(true)
+  if (options.progressFile) await saveProgress(options.progressFile, progress)
+
+  // We do not mark directories as visited in case the user adds new files
+  // in them in the future!
+}
+
+function visitFile(
+  file: dirTree.DirectoryTree,
+  progress: Progress,
+  pool: WorkerPool,
+  options: Omit<ScanOptions, 'workerPoolSize'>
+) {
+  if (file.name === '.gitkeep') return
+
+  if (options.ignoreExt?.has(file.extension!)) {
+    if (options.shouldConsoleLog) logProgress(visitedCount, totalFilesCount, `☢️ Ignored .ext    ${file.path}`)
+    // Mark as visited
+    progress.visited.add(file.path)
+    visitedCount++
+    return
+  }
+
+  if (!isSupportedExtension(file.extension!)) {
+    if (options.shouldConsoleLog) logProgress(visitedCount, totalFilesCount, `👽 Unsupported file ${file.path}`)
+    // Mark as visited
+    progress.visited.add(file.path)
+    visitedCount++
+    return
+  }
+
+  if (progress.visited.has(file.path)) {
+    if (options.shouldConsoleLog) logProgress(visitedCount, totalFilesCount, `⏩ Skip visited     ${file.path}`)
+    visitedCount++
+    return
+  }
+
+  treatFile(file, progress, pool, options)
+}
+
+async function visit(
+  tree: dirTree.DirectoryTree,
+  progress: Progress,
+  pool: WorkerPool,
+  options: Omit<ScanOptions, 'workerPoolSize'>
+) {
+  if (tree.type === 'file') visitFile(tree, progress, pool, options)
+  else if (tree.type === 'directory') await visitDir(tree, progress, pool, options)
+}
+
+export async function scanDir(scannedDir: string, options: ScanOptions = {}) {
   if (!options.words) options.words = ['MATCH_ALL']
   if (!options.shouldConsoleLog) options.shouldConsoleLog = false
 
@@ -208,10 +238,8 @@ export const scanDir = async (scannedDir: string, options: ScanOptions = {}) => 
   const tree = await getTree(scannedDir)
   totalFilesCount = getTreeFilesCount(tree)
 
-  if (tree.type === 'directory') await visitDir(tree, progress, pool, options)
-  else if (tree.type === 'file') await visitFile(tree, progress, pool, options)
+  await visit(tree, progress, pool, options)
 
   await pool.terminate()
-
   return progress
 }

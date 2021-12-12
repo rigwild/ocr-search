@@ -29,14 +29,14 @@ const cli = meow(
     $ ocr-search --words "<words_list>" <input_files>
 
   To delete images created from PDF files pages extractions, check the other provided command:
-    $ ocr-search --help
+    $ ocr-search-clean --help
 
   Required
     --words List of comma-separated words to search (if "MATCH_ALL", will match everything for mass OCR extraction)
     
   Options
     --save-ocr          Save the OCR scanned content of each file to a txt file (e.g. "file.png.txt")
-    --ignoreExt         List of comma-separated file extensions to ignore
+    --ignoreExt         List of comma-separated file extensions to ignore (e.g. ".pdf,.jpg")
     --pdfExtractFirst   Range start of the pages to extract from PDF files (1-indexed)
     --pdfExtractLast    Range end of the pages to extract from PDF files, last page if overflow (1-indexed)
     --progressFile      File to save progress to, will start from where it
@@ -59,7 +59,7 @@ const cli = meow(
       $ ocr-search --words MATCH_ALL --save-ocr *
 
     Skip .pdf and .webp files
-      $ ocr-search --words "wiki,hello" --ignoreExt "pdf,webp" scanned-dir
+      $ ocr-search --words "wiki,hello" --ignoreExt ".pdf,.webp" scanned-dir
 
     Extract only page 3 to 6 in all PDF files (1-indexed)
       $ ocr-search --words "wiki,hello" --pdfExtractFirst 3 --pdfExtractLast 6 scanned-dir

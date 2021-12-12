@@ -32,7 +32,7 @@ export type ScanOptions = {
   words?: string[]
 
   /** Should the OCR scanned content of each file be saved to a txt file (e.g. "file.png.txt") */
-  saveOcr?: string[]
+  saveOcr?: boolean
 
   /** Should the logs be printed to the console? (default = false) */
   shouldConsoleLog?: boolean
@@ -50,7 +50,7 @@ export type ScanOptions = {
   /** If provided, every file path and their text content that were matched are logged to this file */
   matchesLogFile?: string
 
-  /** File extensions to ignore when looking for files */
+  /** File extensions to ignore when looking for files (e.g. `new Set(['.pdf', '.jpg'])`) */
   ignoreExt?: Set<string>
 
   /* Extract PDF files starting at this page, first page is 1 (1-indexed) (default = 1) */
@@ -80,7 +80,7 @@ export type ProgressJson = { visited: string[]; matched: { [path: string]: { tex
 /** @see https://github.com/tesseract-ocr/tesseract/blob/main/doc/tesseract.1.asc */
 export type TesseractConfig = Parameters<typeof tesseractRecognize>[1]
 
-export type WorkerMethods = { scanFile: typeof scanFile }
+export type WorkerMethods = { scanFile: typeof scanFile; pdfToImages: typeof pdfToImages }
 
 export type WorkerPool = Pool<ModuleThread<WorkerMethods>>
 
@@ -182,7 +182,7 @@ export const scanFile = async (
   words: ScanOptions['words'],
   tesseractConfig?: TesseractConfig
 ) => {
-  const text = await ocr(file.path, tesseractConfig)
+  const text = !process.env.FAKE_OCR_TEXT ? await ocr(file.path, tesseractConfig) : process.env.FAKE_OCR_TEXT
   const matches = findMatches(text, words)
   return { text, matches }
 }
